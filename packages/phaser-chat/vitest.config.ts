@@ -1,0 +1,11 @@
+import { defineConfig } from "vitest/config"
+import path from "path"
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: "jsdom",
+    root: path.resolve(__dirname),
+    include: ["tests/**/*.{test,spec,prop}.{ts,tsx}"],
+  },
+})

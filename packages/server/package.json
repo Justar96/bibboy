@@ -1,0 +1,39 @@
+{
+  "name": "@bibboy/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/server.ts",
+  "types": "./src/server.ts",
+  "exports": {
+    ".": {
+      "import": "./src/server.ts",
+      "types": "./src/server.ts"
+    }
+  },
+  "scripts": {
+    "dev": "bun run --watch src/server.ts",
+    "build": "tsc --noEmit",
+    "start": "bun run src/server.ts",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@effect/platform": "catalog:",
+    "@effect/platform-bun": "^0.87.1",
+    "@mozilla/readability": "^0.6.0",
+    "@bibboy/agent-runtime": "workspace:*",
+    "@bibboy/shared": "workspace:*",
+    "effect": "catalog:",
+    "gray-matter": "catalog:",
+    "linkedom": "^0.18.12",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "typescript": "catalog:",
+    "fast-check": "catalog:",
+    "vitest": "catalog:"
+  }
+}

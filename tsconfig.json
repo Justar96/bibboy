@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "target": "ES2020",
+    "forceConsistentCasingInFileNames": true,
+    "useDefineForClassFields": true,
+    "allowImportingTsExtensions": true,
+    "types": ["vitest/globals"]
+  },
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/agent-runtime" },
+    { "path": "./packages/phaser-chat" },
+    { "path": "./packages/client" },
+    { "path": "./packages/server" }
+  ],
+  "include": ["src", "tests", "vite.config.ts", "vitest.workspace.ts"],
+  "exclude": ["node_modules", "dist", "packages"]
+}

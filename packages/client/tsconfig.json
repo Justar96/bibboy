@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "strict": true,
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2020",
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@bibboy/shared": ["../shared/src"],
+      "@bibboy/phaser-chat": ["../phaser-chat/src"]
+    },
+    "noEmit": true
+  },
+  "include": ["src", "vite.config.ts", "tests"],
+  "exclude": ["node_modules", "dist"]
+}

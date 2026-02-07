@@ -1,0 +1,1559 @@
+@import "tailwindcss";
+
+/* Load the existing JS config during migration */
+@config "../tailwind.config.ts";
+
+/* View Transitions API - Next.js-like smooth page transitions */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::view-transition-old(root) {
+  animation-name: fade-out;
+}
+
+::view-transition-new(root) {
+  animation-name: fade-in;
+}
+
+@keyframes fade-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8px); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Enhanced rendering for crisp, smooth UI like Next.js */
+@layer base {
+  /* Font smoothing for crisp text rendering */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  html {
+    scroll-behavior: auto;
+    overflow-x: hidden;
+    /* Prevent layout shift when scrollbar appears/disappears between pages */
+    scrollbar-gutter: stable;
+    /* Optimize text rendering for legibility */
+    text-rendering: optimizeLegibility;
+    /* Enable font feature settings for better typography */
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
+
+  body {
+    overflow-x: hidden;
+    max-width: 100vw;
+    /* Prevent font size adjustment on orientation change */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Custom scrollbar - minimal aesthetic */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #D8D8D8;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #C0C0C0;
+  }
+
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #D8D8D8 transparent;
+  }
+
+  /* Enhanced smooth transitions with better easing */
+  * {
+    transition-property: opacity, transform, background-color, border-color;
+    transition-duration: 0.2s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* GPU acceleration for smoother animations */
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-slide-down,
+  .scroll-reveal {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+}
+
+/* Scroll reveal animation utility */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.scroll-reveal {
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Page entrance animation - instant feel like Next.js */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.page-enter {
+  animation: pageEnter 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Content enter animation - opacity only to prevent layout shift */
+@keyframes contentEnter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.content-enter {
+  animation: contentEnter 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+  /* Prevent flicker during animation */
+  will-change: opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Staggered content entrance for lists */
+.content-stagger > * {
+  opacity: 0;
+  animation: pageEnter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.content-stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.content-stagger > *:nth-child(2) { animation-delay: 0.1s; }
+.content-stagger > *:nth-child(3) { animation-delay: 0.15s; }
+.content-stagger > *:nth-child(4) { animation-delay: 0.2s; }
+.content-stagger > *:nth-child(5) { animation-delay: 0.25s; }
+.content-stagger > *:nth-child(6) { animation-delay: 0.3s; }
+.content-stagger > *:nth-child(7) { animation-delay: 0.35s; }
+.content-stagger > *:nth-child(8) { animation-delay: 0.4s; }
+
+/* Skeleton loading shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #F3F3F3 25%,
+    #EAEAEA 50%,
+    #F3F3F3 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: 3px;
+  /* GPU acceleration for smooth animation */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Skeleton article container - reserve layout space */
+.skeleton-article {
+  /* Same contain as actual article to prevent layout shift */
+  contain: layout style;
+  /* Prevent any transition on skeleton itself */
+  animation: none !important;
+}
+
+/* Smooth skeleton-to-content transition */
+@keyframes skeletonFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes contentFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Prevent skeleton flash when content appears */
+.skeleton-article + .content-enter,
+.content-enter {
+  animation: contentFadeIn 0.25s ease-out both;
+}
+
+/* Staggered animation delays for lists */
+.stagger-item:nth-child(1) { animation-delay: 0.05s; }
+.stagger-item:nth-child(2) { animation-delay: 0.1s; }
+.stagger-item:nth-child(3) { animation-delay: 0.15s; }
+.stagger-item:nth-child(4) { animation-delay: 0.2s; }
+.stagger-item:nth-child(5) { animation-delay: 0.25s; }
+
+/* Paper dossier typography - Funnel Sans for calm, expressive feel */
+body {
+    background-color: #FAFAFA;
+    color: #1A1A1A;
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.6;
+    font-size: 1rem;
+    font-weight: 400;
+    /* Crisp font rendering */
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Enable OpenType features */
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+}
+
+/* Clean link styles */
+a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+a:hover {
+    color: #2563eb;
+}
+
+/* Focus styles for keyboard accessibility (Requirements 9.3, 9.5) */
+a:focus-visible {
+    outline: 2px solid #8b7355; /* ink-400 */
+    outline-offset: 2px;
+    border-radius: 3px;
+}
+
+button:focus-visible {
+    outline: 2px solid #8b7355; /* ink-400 */
+    outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible {
+    outline: 2px solid #8b7355; /* ink-400 */
+    outline-offset: 2px;
+    border-radius: 3px;
+}
+
+/* Enhanced button styles with micro-interactions */
+button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  cursor: pointer;
+  position: relative;
+  /* Smooth button rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* GPU acceleration for smooth hover */
+  transform: translateZ(0);
+}
+
+button:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Button press animation */
+@keyframes buttonPress {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.98); }
+}
+
+button:active:not(:disabled) {
+  animation: buttonPress 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Heading typography - Lora */
+h1 {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 2.5rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: #1A1A1A;
+    letter-spacing: -0.02em;
+    text-rendering: optimizeLegibility;
+}
+
+h2 {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 1.875rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #1A1A1A;
+    letter-spacing: -0.015em;
+    text-rendering: optimizeLegibility;
+}
+
+h3 {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 500;
+    line-height: 1.25;
+    color: #1A1A1A;
+    text-rendering: optimizeLegibility;
+}
+
+h4 {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #333333;
+    text-rendering: optimizeLegibility;
+}
+
+h5 {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: #333333;
+    text-rendering: optimizeLegibility;
+}
+
+p {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+    color: #444444;
+    font-weight: 400;
+}
+
+ul, ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+
+li {
+    margin-bottom: 0.25rem;
+    line-height: 1.6;
+}
+
+/* Paper dossier code blocks - JetBrains Mono for crisp code */
+pre {
+    background-color: #F8F8F8;
+    border: 1px solid #E8E8E8;
+    border-radius: 3px; /* paper border-radius */
+    padding: 1rem;
+    overflow-x: auto;
+    max-width: 100%;
+    margin: 1rem 0;
+    font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+    font-size: 0.875rem;
+    color: #333333;
+    line-height: 1.6;
+    /* Crisp monospace rendering */
+    font-feature-settings: "liga" 1, "calt" 1;
+}
+
+code {
+    font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+    font-size: 0.875em;
+    background-color: #F8F8F8;
+    padding: 0.15rem 0.35rem;
+    border-radius: 3px;
+    border: 1px solid #E8E8E8;
+    color: #333333;
+    font-feature-settings: "liga" 1, "calt" 1;
+}
+
+pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+}
+
+blockquote {
+    border-left: 3px solid #E8E8E8;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: #666666;
+    font-style: italic;
+}
+
+/* Paper dossier card style */
+.card {
+    background: #fbf9f4; /* paper-100 */
+    border: 1px solid #e8dfd0; /* paper-400 */
+    border-radius: 6px; /* paper-lg */
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(74, 58, 42, 0.08), 0 1px 2px rgba(74, 58, 42, 0.06);
+}
+
+/* Paper dossier kbd styling - JetBrains Mono */
+kbd {
+    display: inline-block;
+    padding: 0.15rem 0.4rem;
+    font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+    font-size: 0.75rem;
+    color: #3d2f22; /* ink-700 */
+    background-color: #f5f1eb; /* paper-200 */
+    border: 1px solid #d4c8b8; /* paper-500 */
+    border-radius: 3px;
+    box-shadow: 0 1px 0 rgba(74, 58, 42, 0.1);
+}
+
+
+/* Markdown content styling - Inter */
+.markdown-content {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: #333333;
+  font-weight: 400;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+}
+
+/* Headings - Lora */
+.markdown-content h1 {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 2.25rem;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #1A1A1A;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.markdown-content h2 {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #1A1A1A;
+  margin-top: 3rem;
+  margin-bottom: 1rem;
+  letter-spacing: -0.015em;
+}
+
+.markdown-content h3 {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: #1A1A1A;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.markdown-content h4 {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: #333333;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-content h5 {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: #333333;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Paragraphs */
+.markdown-content p {
+  margin-bottom: 1.5rem;
+  line-height: 1.75;
+  color: #444444;
+}
+
+/* Links */
+.markdown-content a {
+  color: #0066CC;
+  text-decoration: underline;
+  text-decoration-color: #CCE0FF;
+  text-underline-offset: 2px;
+  transition: all 0.2s ease;
+}
+
+.markdown-content a:hover {
+  color: #0052A3;
+  text-decoration-color: #0066CC;
+}
+
+/* Code blocks - Clean gray style */
+.markdown-content pre {
+  background-color: #F8F8F8;
+  border: 1px solid #E8E8E8;
+  border-radius: 3px;
+  padding: 1rem;
+  overflow-x: auto;
+  max-width: 100%;
+  word-wrap: break-word;
+  margin: 1.5rem 0;
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  font-feature-settings: "liga" 1, "calt" 1;
+}
+
+.markdown-content pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #333333;
+  font-size: 0.875rem;
+}
+
+.markdown-content code {
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-feature-settings: "liga" 1, "calt" 1;
+}
+
+/* Inline code */
+.markdown-content :not(pre) > code {
+  background-color: #F8F8F8;
+  color: #333333;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 0.875em;
+  border: 1px solid #E8E8E8;
+}
+
+/* Syntax highlighting - Clean palette */
+.markdown-content .hljs {
+  background: #F8F8F8;
+  color: #333333;
+  padding: 1rem;
+  border-radius: 3px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+/* Tree structure visualization - Clean style */
+.markdown-content pre.tree-structure {
+  background-color: #F8F8F8 !important;
+  border: 1px solid #E8E8E8 !important;
+  padding: 1.25rem !important;
+  border-radius: 3px !important;
+  overflow-x: auto !important;
+  max-width: 100% !important;
+  margin: 1.5rem 0 !important;
+  font-variant-ligatures: none;
+  tab-size: 2;
+  -moz-tab-size: 2;
+}
+
+.markdown-content pre.tree-structure code {
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace !important;
+  font-size: 0.9rem !important;
+  line-height: 1.8 !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.01em !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+  color: #333333 !important;
+}
+
+.markdown-content pre.tree-structure code div {
+  white-space: pre;
+}
+
+/* Better contrast for all code blocks */
+.markdown-content pre {
+  background-color: #F8F8F8;
+  border: 1px solid #E8E8E8;
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  tab-size: 2;
+  -moz-tab-size: 2;
+}
+
+.markdown-content pre code {
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #333333;
+  font-feature-settings: "liga" 1, "calt" 1;
+}
+
+/* Lists */
+.markdown-content ul {
+  list-style-type: disc;
+  list-style-position: outside;
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.markdown-content ol {
+  list-style-type: decimal;
+  list-style-position: outside;
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.markdown-content li {
+  padding-left: 0.5rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.75;
+}
+
+.markdown-content li > p {
+  margin-bottom: 0.5rem;
+}
+
+/* Blockquotes - Paper dossier marginalia style */
+.markdown-content blockquote {
+  border-left: 3px solid #e8dfd0; /* paper-400 */
+  padding-left: 1rem;
+  margin: 1.5rem 0;
+  color: #6b5a47; /* ink-500 */
+  font-style: italic;
+}
+
+/* Horizontal rule */
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid #e8dfd0; /* paper-400 */
+  margin: 3rem 0;
+}
+
+/* Strong and emphasis */
+.markdown-content strong {
+  font-weight: 600;
+  color: #2d231a; /* ink-800 */
+}
+
+.markdown-content em {
+  font-style: italic;
+}
+
+/* Blog content - Research paper typography */
+.blog-content {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 1rem;
+  line-height: 1.85;
+  color: #333333;
+  font-weight: 400;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Line length constraint */
+.blog-content p,
+.blog-content li {
+  max-width: 65ch;
+}
+
+/* Heading hierarchy — monospace uppercase, research paper sections */
+.blog-content h1 {
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #1A1A1A;
+  margin-top: 3rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #E0E0E0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.blog-content h2 {
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #1A1A1A;
+  margin-top: 3rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid #E8E8E8;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.blog-content h3 {
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #333333;
+  margin-top: 2.25rem;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.blog-content h4 {
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #555555;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.blog-content h5 {
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #666666;
+  margin-top: 1.5rem;
+  margin-bottom: 0.375rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Paragraphs — serif body text */
+.blog-content p {
+  margin-bottom: 1.25rem;
+  line-height: 1.85;
+  color: #333333;
+}
+
+/* Blockquotes — academic aside */
+.blog-content blockquote {
+  position: relative;
+  border-left: 2px solid #CCCCCC;
+  padding: 0.625rem 0 0.625rem 1.25rem;
+  margin: 2rem 0;
+  color: #666666;
+  font-style: italic;
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  background: transparent;
+}
+
+.blog-content blockquote::before {
+  content: none;
+}
+
+.blog-content blockquote p {
+  margin-bottom: 0.5rem;
+  color: inherit;
+}
+
+.blog-content blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* Links — subtle underline, academic blue */
+.blog-content a {
+  color: #0066CC;
+  text-decoration: underline;
+  text-decoration-color: #0066CC30;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  transition: all 0.15s ease;
+}
+
+.blog-content a:hover {
+  color: #0052A3;
+  text-decoration-color: #0066CC;
+}
+
+/* Images — centered figures */
+.blog-content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 2rem auto;
+  border-radius: 2px;
+}
+
+.blog-content figure {
+  margin: 2.5rem 0;
+}
+
+.blog-content figure img {
+  margin: 0 auto 0.75rem;
+}
+
+.blog-content figcaption {
+  text-align: center;
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-size: 0.6875rem;
+  color: #999999;
+  font-style: normal;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Code blocks — clean, minimal */
+.blog-content pre {
+  background-color: #FAFAFA;
+  border: 1px solid #EBEBEB;
+  border-radius: 2px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  max-width: 100%;
+  margin: 1.75rem 0;
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  font-feature-settings: "liga" 1, "calt" 1;
+}
+
+.blog-content pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #333333;
+  font-size: 0.8125rem;
+}
+
+/* Inline code */
+.blog-content :not(pre) > code {
+  background-color: #F5F5F5;
+  color: #333333;
+  padding: 0.15em 0.35em;
+  border-radius: 2px;
+  font-size: 0.85em;
+  border: 1px solid #EBEBEB;
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-feature-settings: "liga" 1, "calt" 1;
+}
+
+/* Lists — clean bullets */
+.blog-content ul {
+  list-style-type: disc;
+  list-style-position: outside;
+  padding-left: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.blog-content ol {
+  list-style-type: decimal;
+  list-style-position: outside;
+  padding-left: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.blog-content li {
+  padding-left: 0.375rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.75;
+  color: #333333;
+}
+
+.blog-content li > p {
+  margin-bottom: 0.5rem;
+}
+
+/* Horizontal rule — section break */
+.blog-content hr {
+  border: none;
+  height: 1px;
+  background: #E0E0E0;
+  margin: 3rem 0;
+}
+
+/* Strong and emphasis */
+.blog-content strong {
+  font-weight: 700;
+  color: #1A1A1A;
+}
+
+.blog-content em {
+  font-style: italic;
+}
+
+/* Chat content styling - Funnel Sans for consistent feel */
+.chat-content {
+  font-family: 'Funnel Sans', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #2d231a;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+.chat-content p {
+  margin: 0 0 0.5rem 0;
+}
+
+.chat-content p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-content strong {
+  font-weight: 600;
+  color: #2d231a;
+}
+
+.chat-content em {
+  font-style: italic;
+}
+
+.chat-content ul,
+.chat-content ol {
+  margin: 0.5rem 0 0.75rem;
+  padding-left: 1.5rem;
+  list-style-position: outside;
+}
+
+.chat-content ul {
+  list-style-type: disc;
+}
+
+.chat-content ol {
+  list-style-type: decimal;
+}
+
+.chat-content li {
+  margin-bottom: 0.625rem;
+  padding-left: 0.25rem;
+  line-height: 1.6;
+}
+
+.chat-content li:last-child {
+  margin-bottom: 0;
+}
+
+.chat-content li strong:first-child {
+  color: #1a1412;
+}
+
+/* Chat list items (parsed from markdown) */
+.chat-list-item {
+  display: list-item;
+  list-style-type: disc;
+  margin-left: 1.5rem;
+  margin-bottom: 0.625rem;
+  padding-left: 0.25rem;
+  line-height: 1.6;
+}
+
+.chat-list-item:last-of-type {
+  margin-bottom: 0.25rem;
+}
+
+.chat-list-item strong:first-child {
+  color: #1A1A1A;
+}
+
+/* Chat list wrapper (parsed from markdown) */
+ul.chat-list,
+ol.chat-list {
+  margin: 0.5rem 0 0.75rem;
+  padding-left: 1.5rem;
+  list-style-position: outside;
+}
+
+ul.chat-list {
+  list-style-type: disc;
+}
+
+ol.chat-list {
+  list-style-type: decimal;
+}
+
+.chat-list .chat-list-item {
+  margin-left: 0;
+  margin-bottom: 0.5rem;
+  padding-left: 0.25rem;
+  line-height: 1.6;
+}
+
+.chat-list .chat-list-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Chat blockquotes */
+.chat-blockquote {
+  border-left: 3px solid #c9b99a;
+  padding-left: 0.875rem;
+  margin: 0.5rem 0;
+  color: #5a4a3a;
+  font-style: italic;
+}
+
+/* Chat code block wrapper with header */
+.chat-code-wrapper {
+  border: 1px solid #E8E8E8;
+  border-radius: 4px;
+  margin: 0.5rem 0;
+  overflow: hidden;
+  background: #F8F8F8;
+}
+
+.chat-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.625rem;
+  background: #F0F0F0;
+  border-bottom: 1px solid #E8E8E8;
+}
+
+.chat-code-lang {
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-size: 11px;
+  color: #888;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+.chat-code-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-size: 10px;
+  color: #999;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chat-code-copy:hover {
+  background: #E0E0E0;
+  color: #555;
+  transform: none;
+  box-shadow: none;
+}
+
+.chat-code-copy:active {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Remove border/margin from pre when inside wrapper */
+.chat-code-wrapper .chat-code-block {
+  border: none;
+  margin: 0;
+  border-radius: 0;
+}
+
+/* Chat headings (smaller than blog) */
+.chat-heading {
+  font-weight: 600;
+  color: #1A1A1A;
+  margin-top: 0.75rem;
+  margin-bottom: 0.375rem;
+  line-height: 1.3;
+}
+
+.chat-heading-1 {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+}
+
+.chat-heading-2 {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+}
+
+.chat-heading-3 {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.chat-heading-4 {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Chat horizontal rule */
+.chat-hr {
+  border: none;
+  border-top: 1px solid #e8dfd0;
+  margin: 0.75rem 0;
+}
+
+/* Chat table */
+.chat-table-wrapper {
+  overflow-x: auto;
+  margin: 0.5rem 0;
+  border-radius: 4px;
+  border: 1px solid #E8E8E8;
+}
+
+.chat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.chat-table th {
+  background: #F0F0F0;
+  font-weight: 600;
+  color: #1A1A1A;
+  padding: 0.375rem 0.625rem;
+  border-bottom: 1px solid #E8E8E8;
+  text-align: left;
+}
+
+.chat-table td {
+  padding: 0.375rem 0.625rem;
+  border-bottom: 1px solid #F0F0F0;
+  color: #444;
+}
+
+.chat-table tr:last-child td {
+  border-bottom: none;
+}
+
+.chat-table tr:hover td {
+  background: #FAFAFA;
+}
+
+/* Chat paragraph blocks */
+.chat-paragraph {
+  margin: 0 0 0.5rem 0;
+}
+
+.chat-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+/* Chat code blocks - Compact with JetBrains Mono */
+.chat-code-block {
+  display: block;
+  background-color: #F8F8F8;
+  border: 1px solid #E8E8E8;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0;
+  overflow-x: auto;
+  max-width: 100%;
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  font-feature-settings: "liga" 1, "calt" 1;
+  /* Prevent layout shift during streaming */
+  contain: content;
+  will-change: auto;
+}
+
+.chat-code-block.streaming {
+  opacity: 0.85;
+}
+
+/* Chat content wrapper - smooth transitions */
+.chat-content-wrapper {
+  transition: opacity 0.15s ease;
+}
+
+.chat-content-wrapper.streaming {
+  opacity: 0.9;
+}
+
+.chat-content-wrapper.complete {
+  opacity: 1;
+}
+
+.chat-code-block code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #1A1A1A;
+  font-size: 13px;
+}
+
+/* Chat inline code */
+.chat-inline-code {
+  background-color: #F0F0F0;
+  color: #1A1A1A;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-feature-settings: "liga" 1, "calt" 1;
+}
+
+/* Chat links */
+.chat-link {
+  color: #2563eb;
+  text-decoration: none;
+  border-bottom: 1px solid #bfdbfe;
+  transition: border-color 0.15s ease;
+}
+
+.chat-link:hover {
+  border-color: #2563eb;
+}
+
+/* Styled chat links with clear visual indicators */
+.chat-link-styled {
+  color: #0066CC;
+  text-decoration: underline;
+  text-decoration-color: #0066CC80;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  transition: all 0.15s ease;
+  font-weight: 500;
+}
+
+.chat-link-styled:hover {
+  color: #004C99;
+  text-decoration-color: #004C99;
+  text-decoration-thickness: 2px;
+}
+
+.chat-link-content {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2em;
+}
+
+.chat-link-icon {
+  width: 0.75em;
+  height: 0.75em;
+  flex-shrink: 0;
+  position: relative;
+  top: 0.05em;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.chat-link-styled:hover .chat-link-icon {
+  opacity: 1;
+}
+
+/* Terminal block cursor */
+@keyframes terminal-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.animate-blink {
+  animation: terminal-blink 1s step-end infinite;
+}
+
+/* Shimmer animation for thinking indicator */
+@keyframes shimmer {
+  0% { background-position: -100% 0; }
+  100% { background-position: 100% 0; }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s ease-in-out infinite;
+  background-size: 200% 100%;
+}
+
+/* ============================================================================
+   Thinking Block Styles
+   ============================================================================ */
+
+.thinking-block {
+  background: #FAFAFA;
+  border: 1px solid #E8E8E8;
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+  border-left: 3px solid #E8E8E8;
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+
+/* Streaming state — pulsing warm border + subtle gradient */
+.thinking-block--streaming {
+  border-left: 3px solid #c9b99a;
+  background: linear-gradient(135deg, #FAFAF8 0%, #F8F6F0 100%);
+  animation: thinking-pulse 2s ease-in-out infinite;
+}
+
+@keyframes thinking-pulse {
+  0%, 100% {
+    border-left-color: #c9b99a;
+    background: linear-gradient(135deg, #FAFAF8 0%, #F8F6F0 100%);
+  }
+  50% {
+    border-left-color: #a89474;
+    background: linear-gradient(135deg, #F8F6F0 0%, #F5F1EB 100%);
+  }
+}
+
+.thinking-block button:focus {
+  outline: none;
+}
+
+.thinking-block button:focus-visible {
+  outline: 2px solid #0066CC;
+  outline-offset: -2px;
+}
+
+/* ============================================================================
+   Tool Card Animations & States
+   ============================================================================ */
+
+/* Base tool card styles */
+.tool-card {
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.tool-card:hover {
+  transform: translateY(-1px);
+}
+
+/* Compact tool chips */
+.tool-chip {
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.tool-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(74, 58, 42, 0.08);
+}
+
+/* Subtle pulse animation for running tool cards */
+@keyframes tool-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+  }
+}
+
+.tool-card--running {
+  animation: tool-pulse 2s ease-in-out infinite;
+}
+
+/* Streaming bubble — subtle pulsing border in warm tones */
+.chat-bubble-streaming {
+  border: 1px solid #E8E8E8;
+  border-radius: 0.5rem;
+  animation: streaming-pulse 1.5s ease-out infinite;
+}
+
+@keyframes streaming-pulse {
+  0%, 100% { border-color: #E8E8E8; }
+  50% { border-color: #c9b99a; }
+}
+
+/* Tool activity panel */
+.tool-activity-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Tool detail panel */
+.tool-detail-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tool-detail-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #ebe5db;
+}
+
+.tool-detail-panel__body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Status badge styles */
+.tool-status-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  font-weight: 500;
+}
+
+.tool-status-badge--running {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.tool-status-badge--completed {
+  background-color: #d1fae5;
+  color: #047857;
+}
+
+.tool-status-badge--error {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+/* ============================================================================
+   Message Group Animations
+   ============================================================================ */
+
+.message-group {
+  transition: transform 0.2s ease;
+}
+
+/* ============================================================================
+   Turn-based Chat Layout
+   ============================================================================ */
+
+/* Each conversation turn (user → assistant exchange) */
+.chat-turn {
+  padding: 0;
+}
+
+/* Individual block within a turn (user or assistant section) */
+.chat-turn-block {
+  padding: 0.5rem 0;
+}
+
+/* Subtle divider between turns for visual separation */
+.chat-turn-divider {
+  height: 1px;
+  margin: 0.75rem 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    #e8dfd0 20%,
+    #e8dfd0 80%,
+    transparent
+  );
+  opacity: 0.6;
+}
+
+/* Smooth scroll behavior for chat thread */
+.chat-thread {
+  scroll-behavior: smooth;
+}
+
+/* ============================================================================
+   Screenplay / Script Format Styles
+   ============================================================================ */
+
+.screenplay-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.screenplay-line {
+  margin-bottom: 1.5rem;
+}
+
+.screenplay-character {
+  display: block;
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #1A1A1A;
+  margin-bottom: 0.5rem;
+  padding-left: 2rem;
+}
+
+.screenplay-dialogue {
+  padding-left: 2rem;
+  padding-right: 2rem;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.screenplay-action {
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-size: 11px;
+  font-style: italic;
+  color: #AAAAAA;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.5rem 0;
+}
+
+.screenplay-script {
+  border-left: 2px solid #F0F0F0;
+  margin-left: 0.5rem;
+  padding-left: 1rem;
+}
+
+/* Screenplay typing input focus state */
+.screenplay-dialogue input:focus {
+  outline: none;
+}
+
+/* Screenplay message variants */
+.screenplay-dialogue p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+/* Screenplay continuous blink animation */
+@keyframes screenplay-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.screenplay-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background-color: #1A1A1A;
+  animation: screenplay-blink 1s step-end infinite;
+  vertical-align: text-bottom;
+  margin-left: 1px;
+}
+
+

@@ -1,0 +1,347 @@
+// ============================================================================
+// @bibboy/shared - Shared types, schemas, and utilities
+// ============================================================================
+
+// Error types and schemas
+export {
+  ErrorResponseSchema,
+  createErrorResponse,
+} from "./schemas/errors"
+export type {
+  ErrorResponse,
+} from "./schemas/errors"
+
+// API schemas
+export { HealthResponseSchema } from "./schemas/api"
+export type { HealthResponse } from "./schemas/api"
+
+// Chat schemas and types
+export {
+  MessageRoleSchema,
+  ChatMessageSchema,
+  SearchResultSchema,
+  ToolResultSchema,
+  ChatRequestSchema,
+  ChatResponseSchema,
+  ChatError,
+  RateLimitError,
+  ChatErrorSchema,
+  RateLimitErrorSchema,
+} from "./schemas/chat"
+export type {
+  MessageRole,
+  ChatMessage,
+  SearchResult,
+  ToolResult,
+  ChatRequest,
+  ChatResponse,
+  ChatErrorSchemaType,
+  RateLimitErrorSchemaType,
+} from "./schemas/chat"
+
+// Agent schemas and types (OpenClaw-inspired)
+export {
+  ToolParameterSchema,
+  ToolDefinitionSchema,
+  ToolCallSchema,
+  ToolContentBlockSchema,
+  ToolExecutionResultSchema,
+  ToolStartEventSchema,
+  ToolEndEventSchema,
+  TextDeltaEventSchema,
+  AgentDoneEventSchema,
+  AgentErrorEventSchema,
+  AgentStreamEventSchema,
+  AgentRequestSchema,
+  AgentResponseSchema,
+  AgentError,
+  ToolError,
+  ApiKeyNotConfiguredError,
+  RateLimitExceededError,
+  ContextOverflowError,
+  ApiTimeoutError,
+  ServiceOverloadedError,
+  AuthenticationError,
+  BillingError,
+  NoResponseError,
+  // API response schemas
+  AgentInfoSchema,
+  AgentListResponseSchema,
+  SuggestionsResponseSchema,
+  WorkspaceFileSchema,
+  WorkspaceFilesResponseSchema,
+  WorkspaceFileResponseSchema,
+  // API error schemas
+  ApiKeyNotConfiguredErrorSchema,
+  ValidationErrorSchema,
+  FileNotFoundErrorSchema,
+  FileNotFoundError,
+  ValidationError,
+} from "./schemas/agent"
+export type {
+  ToolParameter,
+  ToolDefinition,
+  ToolCall,
+  ToolContentBlock,
+  ToolExecutionResult,
+  ToolStartEvent,
+  ToolEndEvent,
+  TextDeltaEvent,
+  AgentDoneEvent,
+  AgentErrorEvent,
+  AgentStreamEvent,
+  AgentRequest,
+  AgentResponse,
+  AgentServiceError,
+  // API response types
+  AgentInfo,
+  AgentListResponse,
+  SuggestionsResponse,
+  WorkspaceFileInfo,
+  WorkspaceFilesResponse,
+  WorkspaceFileResponse,
+  // API error types
+  ApiKeyNotConfiguredErrorSchemaType,
+  ValidationErrorSchemaType,
+  FileNotFoundErrorSchemaType,
+} from "./schemas/agent"
+
+// Responses API schemas and types
+export {
+  ResponseOutputTextPartSchema,
+  ResponseRefusalPartSchema,
+  ResponseReasoningTextPartSchema,
+  ResponseContentPartSchema,
+  ResponseMessageItemSchema,
+  ResponseFunctionCallItemSchema,
+  ResponseFunctionCallOutputItemSchema,
+  ResponseOutputItemSchema,
+  ResponseUsageSchema,
+  ResponseStatusSchema,
+  ResponseResourceSchema,
+  ResponseCreatedEventSchema,
+  ResponseInProgressEventSchema,
+  ResponseQueuedEventSchema,
+  ResponseCompletedEventSchema,
+  ResponseFailedEventSchema,
+  OutputItemAddedEventSchema,
+  OutputItemDoneEventSchema,
+  ContentPartAddedEventSchema,
+  ContentPartDoneEventSchema,
+  OutputTextDeltaEventSchema,
+  OutputTextDoneEventSchema,
+  OutputTextAnnotationAddedEventSchema,
+  RefusalDeltaEventSchema,
+  RefusalDoneEventSchema,
+  FunctionCallArgumentsDeltaEventSchema,
+  FunctionCallArgumentsDoneEventSchema,
+  ResponseErrorEventSchema,
+  ResponseStreamEventSchema,
+} from "./schemas/responses"
+export type {
+  ResponseOutputTextPart,
+  ResponseRefusalPart,
+  ResponseReasoningTextPart,
+  ResponseContentPart,
+  ResponseMessageItem,
+  ResponseFunctionCallItem,
+  ResponseFunctionCallOutputItem,
+  ResponseOutputItem,
+  ResponseUsage,
+  ResponseStatus,
+  ResponseResource,
+  ResponseStreamEvent,
+} from "./schemas/responses"
+
+// Tool display configuration
+export {
+  TOOL_DISPLAY_CONFIG,
+  getToolDisplay,
+  getToolStatusColor,
+  resolveToolDisplay,
+  formatToolSummary,
+} from "./schemas/toolDisplay"
+export type { ToolDisplayConfig, ResolvedToolDisplay } from "./schemas/toolDisplay"
+
+// Character state and pose schemas/types
+export {
+  CHARACTER_STATES,
+  CharacterStateSchema,
+  AGENT_POSES,
+  AgentPoseSchema,
+  isCharacterState,
+  isAgentPose,
+} from "./schemas/character"
+export type { CharacterState, AgentPose } from "./schemas/character"
+
+// Canvas builder schemas/types
+export {
+  CANVAS_LAYER_IDS,
+  BODY_VARIANTS,
+  HAIR_VARIANTS,
+  EYES_VARIANTS,
+  OUTFIT_VARIANTS,
+  ACCESSORY_VARIANTS,
+  CANVAS_POSE_IDS,
+  CANVAS_ANIMATION_IDS,
+  CANVAS_PALETTE_PRESETS,
+  CanvasLayerIdSchema,
+  BodyVariantSchema,
+  HairVariantSchema,
+  EyesVariantSchema,
+  OutfitVariantSchema,
+  AccessoryVariantSchema,
+  CanvasPoseIdSchema,
+  CanvasAnimationIdSchema,
+  CanvasPalettePresetIdSchema,
+  HexColorSchema,
+  CanvasBodyLayerSchema,
+  CanvasHairLayerSchema,
+  CanvasEyesLayerSchema,
+  CanvasOutfitLayerSchema,
+  CanvasAccessoryLayerSchema,
+  CanvasLayersSchema,
+  CanvasCharacterBlueprintSchema,
+  CanvasSetLayerVariantOpSchema,
+  CanvasSetLayerColorOpSchema,
+  CanvasSetPaletteOpSchema,
+  CanvasSetPoseOpSchema,
+  CanvasSetAnimationOpSchema,
+  CanvasResetCharacterOpSchema,
+  CanvasUndoOpSchema,
+  CanvasOpSchema,
+  CanvasStatePatchSchema,
+  CanvasStateSnapshotSchema,
+  isCanvasLayerId,
+  isCanvasPoseId,
+  isCanvasAnimationId,
+  isCanvasPalettePresetId,
+  isCanvasLayerVariant,
+  isBodyVariant,
+  isHairVariant,
+  isEyesVariant,
+  isOutfitVariant,
+  isAccessoryVariant,
+  isHexColor,
+  createDefaultCanvasBlueprint,
+} from "./schemas/canvas"
+export type {
+  CanvasLayerId,
+  BodyVariant,
+  HairVariant,
+  EyesVariant,
+  OutfitVariant,
+  AccessoryVariant,
+  CanvasPoseId,
+  CanvasAnimationId,
+  CanvasPalettePresetId,
+  HexColor,
+  CanvasLayers,
+  CanvasCharacterBlueprint,
+  CanvasSetLayerVariantOp,
+  CanvasSetLayerColorOp,
+  CanvasSetPaletteOp,
+  CanvasSetPoseOp,
+  CanvasSetAnimationOp,
+  CanvasResetCharacterOp,
+  CanvasUndoOp,
+  CanvasOp,
+  CanvasStatePatch,
+  CanvasStateSnapshot,
+} from "./schemas/canvas"
+
+// Soul evolution schemas/types
+export {
+  SOUL_STAGES,
+  SoulStageSchema,
+  SOUL_STAGE_THRESHOLDS,
+  PERSONALITY_TRAITS,
+  PersonalityTraitSchema,
+  isPersonalityTrait,
+  SoulEvolutionEventSchema,
+  TraitScoresSchema,
+  SoulStateSchema,
+  SoulStageChangePayloadSchema,
+  SoulStateSnapshotPayloadSchema,
+  getNextStage,
+  createDefaultTraitScores,
+  createDefaultSoulState,
+  getDominantTraits,
+} from "./schemas/soul"
+export type {
+  SoulStage,
+  PersonalityTrait,
+  SoulEvolutionEvent,
+  TraitScores,
+  SoulState,
+  SoulStageChangePayload,
+  SoulStateSnapshotPayload,
+} from "./schemas/soul"
+
+// WebSocket schemas and types
+export {
+  // JSON-RPC base
+  JsonRpcVersionSchema,
+  // Client messages
+  ChatSendRequestSchema,
+  ChatCancelRequestSchema,
+  PingRequestSchema,
+  ClientMessageSchema,
+  // Server responses
+  JsonRpcSuccessResponseSchema,
+  JsonRpcErrorResponseSchema,
+  // Server notifications
+  TypingStateSchema,
+  TypingStartNotificationSchema,
+  TypingStopNotificationSchema,
+  TextDeltaNotificationSchema,
+  ToolStartNotificationSchema,
+  ToolEndNotificationSchema,
+  MessageCompleteNotificationSchema,
+  ErrorNotificationSchema,
+  CompactingNotificationSchema,
+  SessionResumedNotificationSchema,
+  PoseChangeNotificationSchema,
+  CanvasStatePatchNotificationSchema,
+  CanvasStateSnapshotNotificationSchema,
+  SoulStageChangeNotificationSchema,
+  SoulStateSnapshotNotificationSchema,
+  ServerNotificationSchema,
+  ServerMessageSchema,
+  // Session types
+  SessionToolCallSchema,
+  ChatSessionSchema,
+  // Errors
+  SessionNotFoundError,
+  InvalidMessageError,
+  SessionExpiredError,
+  JSON_RPC_ERRORS,
+} from "./schemas/websocket"
+export type {
+  ChatSendRequest,
+  ChatCancelRequest,
+  PingRequest,
+  ClientMessage,
+  JsonRpcSuccessResponse,
+  JsonRpcErrorResponse,
+  TypingState,
+  TypingStartNotification,
+  TypingStopNotification,
+  TextDeltaNotification,
+  ToolStartNotification,
+  ToolEndNotification,
+  MessageCompleteNotification,
+  ErrorNotification,
+  CompactingNotification,
+  SessionResumedNotification,
+  PoseChangeNotification,
+  CanvasStatePatchNotification,
+  CanvasStateSnapshotNotification,
+  SoulStageChangeNotification,
+  SoulStateSnapshotNotification,
+  ServerNotification,
+  ServerMessage,
+  SessionToolCall,
+  ChatSession,
+  WebSocketError,
+} from "./schemas/websocket"

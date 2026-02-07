@@ -1,0 +1,492 @@
+/**
+ * Tool Display Configuration
+ * 
+ * Config-driven system for tool icons, labels, and colors.
+ * Inspired by OpenClaw's tool-display.json approach.
+ */
+
+export interface ToolDisplayConfig {
+  /** Emoji for the tool */
+  emoji?: string
+  /** Icon name (maps to SVG components in client) */
+  icon: string
+  /** Human-readable label */
+  label: string
+  /** Tailwind color classes for status states */
+  colors: {
+    running: string
+    completed: string
+    error: string
+  }
+  /** Keys to extract from tool arguments for display */
+  argKeys?: string[]
+  /** Keys to extract from result for preview */
+  resultKeys?: string[]
+}
+
+/** Resolved tool display with formatted detail */
+export interface ResolvedToolDisplay {
+  name: string
+  emoji: string
+  icon: string
+  label: string
+  detail?: string
+}
+
+/** Max length for detail values before truncation */
+const MAX_DETAIL_LENGTH = 60
+/** Max entries to show in detail */
+const MAX_DETAIL_ENTRIES = 3
+
+/**
+ * Default tool display configuration.
+ */
+export const TOOL_DISPLAY_CONFIG: Record<string, ToolDisplayConfig> = {
+  // Web tools
+  web_search: {
+    emoji: "🔎",
+    icon: "search",
+    label: "Search",
+    colors: {
+      running: "bg-blue-50 border-blue-200 text-blue-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["query"],
+    resultKeys: ["results"],
+  },
+  web_fetch: {
+    emoji: "📄",
+    icon: "globe",
+    label: "Fetch",
+    colors: {
+      running: "bg-purple-50 border-purple-200 text-purple-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["url"],
+    resultKeys: ["title", "content"],
+  },
+  
+  // File tools
+  read_file: {
+    emoji: "📖",
+    icon: "file",
+    label: "Read",
+    colors: {
+      running: "bg-slate-50 border-slate-200 text-slate-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["filePath", "path"],
+    resultKeys: ["content"],
+  },
+  create_file: {
+    emoji: "✍️",
+    icon: "file-plus",
+    label: "Write",
+    colors: {
+      running: "bg-green-50 border-green-200 text-green-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["filePath", "path"],
+  },
+  replace_string_in_file: {
+    emoji: "📝",
+    icon: "edit",
+    label: "Edit",
+    colors: {
+      running: "bg-amber-50 border-amber-200 text-amber-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["filePath", "path"],
+  },
+  
+  // Search tools
+  grep_search: {
+    emoji: "🔍",
+    icon: "code-search",
+    label: "Grep",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["query", "includePattern"],
+  },
+  semantic_search: {
+    emoji: "✨",
+    icon: "sparkles",
+    label: "Semantic",
+    colors: {
+      running: "bg-violet-50 border-violet-200 text-violet-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["query"],
+  },
+  file_search: {
+    emoji: "📁",
+    icon: "folder-search",
+    label: "Find",
+    colors: {
+      running: "bg-teal-50 border-teal-200 text-teal-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["query", "pattern"],
+  },
+  
+  // Terminal tools
+  run_in_terminal: {
+    emoji: "🛠️",
+    icon: "terminal",
+    label: "Exec",
+    colors: {
+      running: "bg-zinc-100 border-zinc-300 text-zinc-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["command"],
+    resultKeys: ["output"],
+  },
+  
+  // Memory tools
+  memory_search: {
+    emoji: "🧠",
+    icon: "brain",
+    label: "Memory",
+    colors: {
+      running: "bg-pink-50 border-pink-200 text-pink-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["query"],
+    resultKeys: ["matches"],
+  },
+
+  // Canvas builder tools
+  canvas_get_state: {
+    emoji: "🖼️",
+    icon: "sparkles",
+    label: "Canvas State",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    resultKeys: ["version"],
+  },
+  canvas_set_layer_variant: {
+    emoji: "🎨",
+    icon: "paintbrush",
+    label: "Layer Variant",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["layer", "variant"],
+  },
+  canvas_set_layer_color: {
+    emoji: "🧪",
+    icon: "palette",
+    label: "Layer Color",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["layer", "color"],
+  },
+  canvas_set_palette: {
+    emoji: "🌈",
+    icon: "palette",
+    label: "Palette",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["palette"],
+  },
+  canvas_set_pose: {
+    emoji: "🧍",
+    icon: "sparkles",
+    label: "Pose",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["pose"],
+  },
+  canvas_set_animation: {
+    emoji: "🎞️",
+    icon: "sparkles",
+    label: "Animation",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["animation"],
+  },
+  canvas_reset_character: {
+    emoji: "♻️",
+    icon: "wrench",
+    label: "Reset Character",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+  },
+  canvas_undo: {
+    emoji: "↩️",
+    icon: "wrench",
+    label: "Undo",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+  },
+  canvas_export_blueprint: {
+    emoji: "📦",
+    icon: "file",
+    label: "Export Blueprint",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+  },
+
+  // Soul evolution tools
+  soul_observe_trait: {
+    emoji: "👁️",
+    icon: "sparkles",
+    label: "Observe Trait",
+    colors: {
+      running: "bg-fuchsia-50 border-fuchsia-200 text-fuchsia-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["trait", "strength"],
+  },
+  soul_get_state: {
+    emoji: "💠",
+    icon: "sparkles",
+    label: "Soul State",
+    colors: {
+      running: "bg-fuchsia-50 border-fuchsia-200 text-fuchsia-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    resultKeys: ["stage"],
+  },
+
+  // List/navigate tools
+  list_dir: {
+    emoji: "📂",
+    icon: "folder",
+    label: "List",
+    colors: {
+      running: "bg-orange-50 border-orange-200 text-orange-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["path"],
+  },
+  
+  // Agent tools
+  sessions_spawn: {
+    emoji: "🧑‍🔧",
+    icon: "sparkles",
+    label: "Sub-agent",
+    colors: {
+      running: "bg-indigo-50 border-indigo-200 text-indigo-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["label", "task", "agentId"],
+  },
+}
+
+/**
+ * Default config for unknown tools.
+ */
+const DEFAULT_TOOL_CONFIG: ToolDisplayConfig = {
+  emoji: "🧩",
+  icon: "wrench",
+  label: "Tool",
+  colors: {
+    running: "bg-gray-50 border-gray-200 text-gray-700",
+    completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+    error: "bg-red-50 border-red-200 text-red-700",
+  },
+}
+
+/**
+ * Get display configuration for a tool.
+ */
+export function getToolDisplay(toolName: string): ToolDisplayConfig {
+  return TOOL_DISPLAY_CONFIG[toolName] ?? { ...DEFAULT_TOOL_CONFIG, label: formatToolName(toolName) }
+}
+
+/**
+ * Get color class for a tool's status.
+ */
+export function getToolStatusColor(toolName: string, status: "running" | "completed" | "error"): string {
+  const config = getToolDisplay(toolName)
+  return config.colors[status]
+}
+
+/**
+ * Truncate text to max length with ellipsis.
+ */
+function truncateText(text: string, maxLength: number): string {
+  const trimmed = text.trim()
+  if (trimmed.length <= maxLength) return trimmed
+  return `${trimmed.slice(0, maxLength - 1)}…`
+}
+
+/**
+ * Coerce a value to a display string.
+ */
+function coerceDisplayValue(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined
+  
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (!trimmed) return undefined
+    // Take first line only
+    const firstLine = trimmed.split(/\r?\n/)[0]?.trim() ?? ""
+    if (!firstLine) return undefined
+    return truncateText(firstLine, MAX_DETAIL_LENGTH)
+  }
+  
+  if (typeof value === "boolean") {
+    return value ? "true" : undefined
+  }
+  
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return undefined
+    return String(value)
+  }
+  
+  if (Array.isArray(value)) {
+    const values = value
+      .map(item => coerceDisplayValue(item))
+      .filter((item): item is string => Boolean(item))
+    if (values.length === 0) return undefined
+    const preview = values.slice(0, MAX_DETAIL_ENTRIES).join(", ")
+    return values.length > MAX_DETAIL_ENTRIES ? `${preview}…` : preview
+  }
+  
+  return undefined
+}
+
+/**
+ * Format a path for display (shorten long paths).
+ */
+function formatPath(path: string): string {
+  const parts = path.split("/")
+  if (parts.length <= 3) return path
+  return `…/${parts.slice(-2).join("/")}`
+}
+
+/**
+ * Format a URL for display (show hostname only).
+ */
+function formatUrl(url: string): string {
+  try {
+    return new URL(url).hostname.replace("www.", "")
+  } catch {
+    return truncateText(url, 40)
+  }
+}
+
+/**
+ * Resolve display details from tool arguments.
+ */
+function resolveDetailFromArgs(args: Record<string, unknown>, keys: string[]): string | undefined {
+  const entries: string[] = []
+  
+  for (const key of keys) {
+    const value = args[key]
+    if (value === undefined) continue
+    
+    let display: string | undefined
+    
+    // Special formatting for certain key types
+    if (key === "url" || key === "targetUrl") {
+      display = formatUrl(String(value))
+    } else if (key === "filePath" || key === "path") {
+      display = formatPath(String(value))
+    } else if (key === "query" || key === "command") {
+      const text = coerceDisplayValue(value)
+      display = text ? `"${text}"` : undefined
+    } else {
+      display = coerceDisplayValue(value)
+    }
+    
+    if (display) {
+      entries.push(display)
+    }
+  }
+  
+  if (entries.length === 0) return undefined
+  return entries.slice(0, MAX_DETAIL_ENTRIES).join(" · ")
+}
+
+/**
+ * Resolve full tool display with formatted detail.
+ * Following OpenClaw's resolveToolDisplay pattern.
+ */
+export function resolveToolDisplay(params: {
+  name: string
+  args?: Record<string, unknown>
+}): ResolvedToolDisplay {
+  const config = getToolDisplay(params.name)
+  
+  let detail: string | undefined
+  if (params.args && config.argKeys?.length) {
+    detail = resolveDetailFromArgs(params.args, config.argKeys)
+  }
+  
+  return {
+    name: params.name,
+    emoji: config.emoji ?? "🧩",
+    icon: config.icon,
+    label: config.label,
+    detail,
+  }
+}
+
+/**
+ * Format a tool summary line (emoji + label + detail).
+ * Following OpenClaw's formatToolSummary pattern.
+ */
+export function formatToolSummary(display: ResolvedToolDisplay): string {
+  const parts = [display.emoji, display.label]
+  if (display.detail) {
+    parts.push(display.detail)
+  }
+  return parts.join(" ")
+}
+
+/**
+ * Format a tool name for display (fallback for unknown tools).
+ */
+function formatToolName(name: string): string {
+  return name
+    .replace(/_/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .split(" ")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ")
+}

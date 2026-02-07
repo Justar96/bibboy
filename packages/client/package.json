@@ -1,0 +1,45 @@
+{
+  "name": "@bibboy/client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config vite.config.ts",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@effect/platform": "catalog:",
+    "@effect/schema": "catalog:",
+    "@bibboy/phaser-chat": "workspace:*",
+    "@bibboy/shared": "workspace:*",
+    "@radix-ui/react-hover-card": "^1.1.15",
+    "clsx": "^2.1.1",
+    "effect": "catalog:",
+    "framer-motion": "catalog:",
+    "highlight.js": "catalog:",
+    "lucide-react": "catalog:",
+    "phaser": "^3.90.0",
+    "qss": "^3.0.0",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-router-dom": "catalog:",
+    "tailwind-merge": "^3.4.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "catalog:",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "jsdom": "catalog:",
+    "rollup-plugin-visualizer": "^6.0.5",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}
