@@ -33,7 +33,7 @@ describe("Layout", () => {
 
   it("does not render legacy nav links directly", () => {
     renderLayout()
-    expect(screen.queryByText("Nalongkorn Panti")).not.toBeInTheDocument()
+    expect(screen.queryByText("Bibboy")).not.toBeInTheDocument()
     expect(screen.queryByText("Chat")).not.toBeInTheDocument()
   })
 })

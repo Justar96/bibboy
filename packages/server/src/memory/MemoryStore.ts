@@ -40,7 +40,7 @@ export interface MemoryStoreOptions {
 // SQLite Memory Store
 // ============================================================================
 
-const DEFAULT_STATE_DIR = path.join(os.homedir(), ".portfolio")
+const DEFAULT_STATE_DIR = path.join(os.homedir(), ".bibboy")
 
 function ensureDir(dir: string): void {
   if (!fs.existsSync(dir)) {

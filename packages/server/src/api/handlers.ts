@@ -80,7 +80,7 @@ export const apiGroupLive = HttpApiBuilder.group(api, "api", (handlers) =>
                       role: "user",
                       parts: [
                         {
-                          text: `You are helping generate conversation starters for a portfolio chat assistant. Based on the persona below, generate 3 short, interesting questions a visitor might ask. Keep each under 40 characters. Return ONLY a JSON array of strings, no explanation.
+                          text: `You are helping generate conversation starters for a soul companion chat. Based on the persona below, generate 3 short, interesting questions a visitor might ask. Keep each under 40 characters. Return ONLY a JSON array of strings, no explanation.
 
 Persona:
 ${soulContent.slice(0, 1500)}

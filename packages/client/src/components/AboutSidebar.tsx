@@ -1,4 +1,4 @@
-import { Github, Twitter, Mail } from "lucide-react"
+import { Github } from "lucide-react"
 
 export function AboutSidebar() {
   return (
@@ -10,42 +10,26 @@ export function AboutSidebar() {
         {/* Name & Title */}
         <div className="mb-5">
           <h3 className="font-display text-xl text-ink-700 mb-1">
-            Justar
+            Bibboy
           </h3>
-          <p className="text-sm text-ink-400">Software Engineer</p>
+          <p className="text-sm text-ink-400">Soul Companion</p>
         </div>
 
         {/* Bio */}
         <p className="text-sm text-ink-500 leading-relaxed mb-6">
-          Building things with TypeScript and Python.
+          A pixel character that evolves as it learns about you.
         </p>
 
         {/* Social Links */}
         <div className="flex items-center gap-4">
           <a
-            href="https://github.com/Justar96"
+            href="https://github.com"
             target="_blank"
             rel="noopener noreferrer"
             className="text-ink-400 hover:text-ink-600 transition-colors"
             aria-label="GitHub"
           >
             <Github className="w-5 h-5" />
-          </a>
-          <a
-            href="https://x.com/bebe_tar24"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-ink-400 hover:text-ink-600 transition-colors"
-            aria-label="Twitter"
-          >
-            <Twitter className="w-5 h-5" />
-          </a>
-          <a
-            href="mailto:nalongkon1996@gmail.com"
-            className="text-ink-400 hover:text-ink-600 transition-colors"
-            aria-label="Email"
-          >
-            <Mail className="w-5 h-5" />
           </a>
         </div>
       </div>

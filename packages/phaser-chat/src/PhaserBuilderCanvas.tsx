@@ -85,7 +85,7 @@ export function PhaserBuilderCanvas({
       </div>
       <div
         ref={containerRef}
-        className="relative mx-auto w-full h-[220px] sm:h-[250px] lg:h-[280px] border border-[#E8E8E8] rounded-md bg-[#FAFAFA]"
+        className="relative mx-auto w-full h-[270px] sm:h-[300px] lg:h-[330px] border border-[#E8E8E8] rounded-md bg-[#FAFAFA]"
       />
     </section>
   )

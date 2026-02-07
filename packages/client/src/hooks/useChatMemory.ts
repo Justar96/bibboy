@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import type { ChatMessage } from "@bibboy/shared"
 
-const STORAGE_KEY = "portfolio-chat-messages" as const
+const STORAGE_KEY = "bibboy-chat-messages" as const
 
 /** Result type for useChatMemory hook */
 export interface UseChatMemoryResult {

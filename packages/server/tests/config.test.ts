@@ -66,7 +66,6 @@ describe("AppConfig", () => {
       expect(config.nodeEnv).toBe("development")
       expect(Option.isNone(config.agentConfig)).toBe(true)
       expect(config.allowedOrigins).toContain("http://localhost:3000")
-      expect(config.allowedOrigins).toContain("https://jtardiern.com")
     })
 
     it("loads GEMINI_API_KEY as secret", () => {
@@ -241,22 +240,22 @@ describe("AppConfig", () => {
     it("returns whitelisted origin in production", () => {
       process.env.NODE_ENV = "production"
       const config = loadConfigSync()
-      const origin = getAllowedOrigin(config, "https://jtardiern.com")
-      expect(origin).toBe("https://jtardiern.com")
+      const origin = getAllowedOrigin(config, "http://localhost:3000")
+      expect(origin).toBe("http://localhost:3000")
     })
 
     it("returns default domain for non-whitelisted origin in production", () => {
       process.env.NODE_ENV = "production"
       const config = loadConfigSync()
       const origin = getAllowedOrigin(config, "https://evil.com")
-      expect(origin).toBe("https://jtardiern.com")
+      expect(origin).toBe("http://localhost:3001")
     })
 
     it("returns default domain for null origin in production", () => {
       process.env.NODE_ENV = "production"
       const config = loadConfigSync()
       const origin = getAllowedOrigin(config, null)
-      expect(origin).toBe("https://jtardiern.com")
+      expect(origin).toBe("http://localhost:3001")
     })
   })
 })

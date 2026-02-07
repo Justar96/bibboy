@@ -1,75 +1,61 @@
-# Portfolio
+# Bibboy
 
-A clean, minimalist portfolio website built as a Bun workspaces monorepo with Vite, React, Effect TS, and Bun runtime.
+An AI-powered soul companion with a pixel character that evolves as it learns about you through conversation.
 
 ## Features
 
-- **Monorepo Architecture** - Organized with Bun workspaces for clean separation of concerns
-- **Shared Types** - Common schemas and types shared between client and server
-- **Effect TS** - Type-safe error handling with Effect's functional patterns
-- **Effect HttpApi** - Type-safe API definitions with automatic OpenAPI generation
-- **Markdown Blog** - Blog posts with syntax highlighting and custom components
-- **Static Generation** - SEO-friendly static HTML generation for blog posts
-- **Fast Development** - Vite HMR for instant feedback
+- **Soul Evolution** - Character starts as a minimal orb and evolves through 5 stages based on personality traits observed during conversation
+- **Phaser 3 Canvas** - Pixel art character rendered with layered sprites, animations, and visual transitions
+- **AI Agent Chat** - Gemini-powered conversational agent with memory, web search, and workspace tools
+- **WebSocket Real-Time** - JSON-RPC 2.0 protocol for streaming chat and live canvas updates
+- **Monorepo Architecture** - Bun workspaces with shared types between client and server
 
 ## Tech Stack
 
 - **Bun** - Package manager, runtime, and workspace management
 - **Vite** - Fast build tool with HMR
 - **React 19** - UI framework
-- **React Router** - Client-side routing
+- **Phaser 3** - 2D game framework for character rendering
 - **Effect TS** - Functional programming with type-safe errors
-- **Effect HttpApi** - Type-safe API definitions
-- **TypeScript** - Type safety
+- **Gemini** - AI chat and embeddings
+- **TypeScript** - Type safety throughout
 - **Tailwind CSS** - Styling
 
 ## Project Structure
 
 ```
-portfolio/
+bibboy/
 ├── packages/
 │   ├── shared/          # @bibboy/shared - Types, schemas, utilities
-│   │   └── src/
-│   │       └── schemas/ # Effect Schema definitions (Post, errors, API)
 │   ├── client/          # @bibboy/client - Vite + React app
-│   │   └── src/
-│   │       ├── components/  # React components
-│   │       ├── pages/       # Route components
-│   │       ├── hooks/       # Data fetching hooks
-│   │       └── services/    # Client-side services
-│   └── server/          # @bibboy/server - Effect HttpApi server
-│       └── src/
-│           ├── api/         # API definitions and handlers
-│           └── services/    # PostService implementation
-├── content/
-│   └── posts/           # Markdown blog posts
-├── scripts/             # Build scripts (static generation, sitemap)
-├── package.json         # Root workspace configuration
-└── vitest.workspace.ts  # Test configuration
+│   ├── server/          # @bibboy/server - Effect HttpApi server
+│   ├── phaser-chat/     # @bibboy/phaser-chat - Phaser 3 canvas
+│   └── agent-runtime/   # @bibboy/agent-runtime - Gemini client
+└── scripts/             # Build scripts
 ```
 
 ## Getting Started
 
 1. Install dependencies:
+
    ```bash
    bun install
    ```
 
-2. Run both client and server:
+2. Set up environment:
+
+   ```bash
+   cp packages/server/.env.example packages/server/.env
+   # Add your GEMINI_API_KEY
+   ```
+
+3. Run both client and server:
+
    ```bash
    bun run dev:all
    ```
 
-   Or run them separately:
-   ```bash
-   # Terminal 1 - Vite dev server (port 3000)
-   bun run dev
-
-   # Terminal 2 - API server (port 3001)
-   bun run dev:server
-   ```
-
-3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+4. Open [http://localhost:3000](http://localhost:3000)
 
 ## Commands
 
@@ -81,80 +67,43 @@ bun run dev:all          # Run both in parallel
 
 # Building
 bun run build            # Build all packages (shared → client → server)
-bun run build:static     # Generate static HTML for blog posts
-bun run build:sitemap    # Generate sitemap
-bun run build:all        # All build steps
+bun run build:standalone # Build standalone server binary
 
 # Testing
 bun run test             # Run all tests
 bun run test:watch       # Watch mode
+bun run test:coverage    # Coverage report
 
 # Linting
 bun run lint             # ESLint
 ```
 
-## Adding Content
+## Soul Evolution
 
-Blog posts are stored as Markdown files in `content/posts/`. Each post requires frontmatter:
+The character evolves through 5 stages as the agent observes personality traits:
 
-```markdown
----
-title: "Post Title"
-date: "2025-01-15"
-description: "Brief description"
-tags: ["tag1", "tag2"]
----
+| Stage    | Interactions | Visual                                    |
+| -------- | ------------ | ----------------------------------------- |
+| Orb      | 0-2          | Monochrome, closed eyes, minimal          |
+| Nascent  | 3-7          | Eyes open, first colors appear            |
+| Forming  | 8-15         | Hair/outfit variants, personalized colors |
+| Awakened | 16-30        | Accessories, expressive eyes, animations  |
+| Evolved  | 30+          | Fully personalized character              |
 
-Content goes here...
-```
+Personality traits (curious, creative, analytical, playful, calm, energetic, empathetic, bold) influence visual choices like colors, hair style, outfit, and accessories.
 
-## API Endpoints
+## Environment Variables
 
-- `GET /api/health` - Health check
-- `GET /api/posts` - All posts
-- `GET /api/posts/:slug` - Single post
-- `GET /api/swagger` - Swagger UI / OpenAPI docs
+**Required:**
 
-## Package Details
+- `GEMINI_API_KEY` - Google Gemini API key
 
-### @bibboy/shared
+**Optional:**
 
-Contains Effect Schema definitions shared between client and server:
-- `PostSchema` - Blog post data structure
-- Error types (`PostNotFoundError`, `PathTraversalError`, `PostParseError`)
-- API response schemas
+- `BRAVE_API_KEY` - Brave Search API for web search tool
+- `ALLOWED_ORIGINS` - Comma-separated CORS origins
 
-### @bibboy/client
+## CONTRIBUTE
 
-Vite + React application with:
-- React Router for client-side navigation
-- Tailwind CSS for styling
-- Custom markdown rendering with syntax highlighting
-- Data fetching hooks using the API
-
-### @bibboy/server
-
-Effect HttpApi server with:
-- Type-safe API endpoints
-- PostService for blog post operations
-- Bun.markdown for server-side rendering
-- Automatic OpenAPI documentation
-
-## Deploy
-
-### Railway
-
-This project is configured for deployment on Railway:
-
-1. Push your code to GitHub main branch
-2. Connect your repo in Railway dashboard
-3. Railway will automatically build and deploy
-
-The `railway.json` configuration includes health checks and restart policies.
-
-## Customization
-
-1. Update your name and bio in `packages/client/src/pages/HomePage.tsx`
-2. Update social links in the Connect section
-3. Add blog posts as Markdown files in `content/posts/`
-4. Customize colors in `packages/client/src/index.css` and Tailwind config
+> so first off this project mostly written by AI no fences here AI is greate with good driver you still need to understand fundamentals of programming to make it work
+> second off this is a work in progress so expect bugs

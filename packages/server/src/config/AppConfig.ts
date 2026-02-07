@@ -55,8 +55,6 @@ const DEFAULT_PORT = 3001
 const DEFAULT_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:3001",
-  "https://jtardiern.com",
-  "https://www.jtardiern.com",
 ]
 
 // ============================================================================
@@ -118,13 +116,13 @@ const AppConfigEffect = Effect.gen(function* () {
   )
 
   // Workspace directory
-  const defaultWorkspaceDir = join(homeDir, ".portfolio", "workspace")
+  const defaultWorkspaceDir = join(homeDir, ".bibboy", "workspace")
   const workspaceDir = yield* Config.string("WORKSPACE_DIR").pipe(
     Config.withDefault(defaultWorkspaceDir)
   )
 
   // Agent state directory
-  const defaultStateDir = join(homeDir, ".portfolio", "state")
+  const defaultStateDir = join(homeDir, ".bibboy", "state")
   const agentStateDir = yield* Config.string("AGENT_STATE_DIR").pipe(
     Config.withDefault(defaultStateDir)
   )
@@ -217,7 +215,7 @@ export const getAllowedOrigin = (
   }
 
   // Default to self
-  return "https://jtardiern.com"
+  return "http://localhost:3001"
 }
 
 // ============================================================================
@@ -258,10 +256,10 @@ export function loadConfigSync(): AppConfigData {
     ? Option.some(agentConfigRaw)
     : Option.none()
 
-  const defaultWorkspaceDir = join(homeDir, ".portfolio", "workspace")
+  const defaultWorkspaceDir = join(homeDir, ".bibboy", "workspace")
   const workspaceDir = process.env.WORKSPACE_DIR ?? defaultWorkspaceDir
 
-  const defaultStateDir = join(homeDir, ".portfolio", "state")
+  const defaultStateDir = join(homeDir, ".bibboy", "state")
   const agentStateDir = process.env.AGENT_STATE_DIR ?? defaultStateDir
 
   return {

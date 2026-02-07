@@ -140,7 +140,7 @@ function resolveAgentFromRequest(request: AgentRequest): ResolvedAgentConfig {
       local: {},
       store: {
         driver: "sqlite",
-        path: `${appConfig.homeDir}/.portfolio/state/memory/default.sqlite`,
+        path: `${appConfig.homeDir}/.bibboy/state/memory/default.sqlite`,
         vector: { enabled: true },
       },
       chunking: { tokens: 400, overlap: 80 },

@@ -373,7 +373,7 @@ export function PlaygroundPage() {
   return (
     <section className="min-h-[calc(100vh-200px)] lg:min-h-[calc(100vh-180px)] flex flex-col">
       {USE_WEBSOCKET_CHAT && (
-        <Suspense fallback={<div className="w-full h-[220px] mb-4 sm:mb-6" />}>
+        <Suspense fallback={<div className="w-full h-[270px] mb-4 sm:mb-6" />}>
           <PhaserBuilderCanvas
             blueprint={wsChat.canvasBlueprint}
             version={wsChat.canvasVersion}

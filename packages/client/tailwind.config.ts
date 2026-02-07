@@ -4,6 +4,7 @@ const config: Config = {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx,mdx}",
+    "../phaser-chat/src/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {

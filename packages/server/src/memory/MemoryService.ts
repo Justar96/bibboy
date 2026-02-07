@@ -31,7 +31,7 @@ export interface FormattedSearchResult {
 /**
  * High-level memory service that combines vector search with session context.
  *
- * For the portfolio chat, session memory is primary — the conversation history
+ * For the bibboy chat, session memory is primary — the conversation history
  * within the current session IS the memory. SQLite-backed vector search is
  * optional and used for workspace/SOUL.md context if indexed.
  */

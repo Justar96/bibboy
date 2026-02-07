@@ -1,4 +1,4 @@
-import { Github, Twitter, Mail, type LucideIcon } from "lucide-react"
+import { Github, Mail, type LucideIcon } from "lucide-react"
 
 // ============================================================================
 // Types
@@ -17,38 +17,30 @@ export interface PersonalInfo {
   readonly name: string
   readonly email: string
   readonly tagline: string
-  readonly location: string
 }
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
-/** Personal information displayed throughout the site */
+/** Project information displayed throughout the site */
 export const personalInfo = {
-  name: "Nalongkorn Panti",
-  email: "nalongkon1996@gmail.com",
-  tagline: "Building things that solve real problems.",
-  location: "Bangkok",
+  name: "Bibboy",
+  email: "",
+  tagline: "A soul companion that grows with you.",
 } as const satisfies PersonalInfo
 
 /** Social media links for contact section */
 export const socialLinks: readonly SocialLink[] = [
   {
     name: "GitHub",
-    url: "https://github.com/Justar96",
+    url: "https://github.com",
     icon: Github,
     isExternal: true,
   },
   {
-    name: "Twitter",
-    url: "https://x.com/bebe_tar24",
-    icon: Twitter,
-    isExternal: true,
-  },
-  {
     name: "Email",
-    url: "mailto:nalongkon1996@gmail.com",
+    url: "mailto:",
     icon: Mail,
     isExternal: false,
   },

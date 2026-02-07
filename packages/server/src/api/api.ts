@@ -116,6 +116,6 @@ export const apiGroup = HttpApiGroup.make("api")
 /**
  * The complete API definition
  */
-export const api = HttpApi.make("portfolio-api")
+export const api = HttpApi.make("bibboy-api")
   .add(apiGroup)
   .addError(ErrorResponseSchema)

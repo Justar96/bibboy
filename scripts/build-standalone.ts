@@ -24,7 +24,7 @@ async function buildStandalone(): Promise<void> {
   try {
     // Build the standalone executable
     // Note: --compile creates a single executable file
-    const outputName = process.platform === "win32" ? "portfolio-server.exe" : "portfolio-server"
+    const outputName = process.platform === "win32" ? "bibboy-server.exe" : "bibboy-server"
     const outputPath = path.join(serverDirectory, outputName)
     
     const command = `bun build src/api/server.ts --compile --outfile=${outputPath} --minify`
