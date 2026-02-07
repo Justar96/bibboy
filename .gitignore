@@ -44,4 +44,9 @@ next-env.d.ts
 
 # Monorepo
 packages/*/node_modules
+assets/
+
+# Agents and caches
+.claude/skills/
+.claude/
 
