@@ -71,6 +71,8 @@ export {
   WorkspaceFileSchema,
   WorkspaceFilesResponseSchema,
   WorkspaceFileResponseSchema,
+  WorkspaceDeleteResponseSchema,
+  WorkspaceResetResponseSchema,
   // API error schemas
   ApiKeyNotConfiguredErrorSchema,
   ValidationErrorSchema,
@@ -100,6 +102,8 @@ export type {
   WorkspaceFileInfo,
   WorkspaceFilesResponse,
   WorkspaceFileResponse,
+  WorkspaceDeleteResponse,
+  WorkspaceResetResponse,
   // API error types
   ApiKeyNotConfiguredErrorSchemaType,
   ValidationErrorSchemaType,
@@ -209,9 +213,13 @@ export {
   CanvasSetAnimationOpSchema,
   CanvasResetCharacterOpSchema,
   CanvasUndoOpSchema,
+  CanvasSetLayerVisibilityOpSchema,
+  CanvasRandomizeCharacterOpSchema,
   CanvasOpSchema,
   CanvasStatePatchSchema,
   CanvasStateSnapshotSchema,
+  CanvasLayerVisibilitySchema,
+  DEFAULT_LAYER_VISIBILITY,
   isCanvasLayerId,
   isCanvasPoseId,
   isCanvasAnimationId,
@@ -224,6 +232,7 @@ export {
   isAccessoryVariant,
   isHexColor,
   createDefaultCanvasBlueprint,
+  createRandomCanvasBlueprint,
 } from "./schemas/canvas"
 export type {
   CanvasLayerId,
@@ -245,9 +254,12 @@ export type {
   CanvasSetAnimationOp,
   CanvasResetCharacterOp,
   CanvasUndoOp,
+  CanvasSetLayerVisibilityOp,
+  CanvasRandomizeCharacterOp,
   CanvasOp,
   CanvasStatePatch,
   CanvasStateSnapshot,
+  CanvasLayerVisibility,
 } from "./schemas/canvas"
 
 // Soul evolution schemas/types

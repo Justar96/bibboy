@@ -48,6 +48,7 @@ import {
   toGeminiFunctionDeclarations,
 } from "./agent-service-tool-execution"
 import { orchestrateAgentStreamIterations } from "./agent-service-stream-orchestrator"
+import { createToolResultGuard, repairTranscript } from "../tools/tool-result-guard"
 
 // Load config and initialize agent config on module load
 const appConfig = getGlobalConfig()
@@ -168,6 +169,10 @@ const runAgent = (
     const metrics = createToolExecutionMetrics()
     const toolCtx: ToolExecutionContext = { timeoutMs: DEFAULT_TOOL_TIMEOUT_MS, metrics }
 
+    // Tool result guard — tracks pending tool calls and synthesizes missing results
+    // Ensures Gemini never sees orphaned function calls without responses
+    const toolGuard = createToolResultGuard()
+
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
       // Re-fetch tool defs each iteration (may grow via request_tools)
       const currentToolDefs = enableTools
@@ -195,6 +200,12 @@ const runAgent = (
       let overflowAttempts = 0
 
       while (overflowAttempts <= MAX_OVERFLOW_COMPACTION_ATTEMPTS) {
+        // Repair transcript before sending to Gemini (ensures no orphaned function calls)
+        const repairedContents = repairTranscript(currentContents)
+        // Update currentContents in-place with repaired version
+        currentContents.length = 0
+        currentContents.push(...repairedContents)
+
         const result = yield* pipe(
           callGeminiWithRetry(currentContents, systemWithBudget, currentToolDefs, apiKey, model, fallbackModels, thinkingBudget),
           Effect.map((r) => ({ success: true as const, value: r })),
@@ -263,11 +274,19 @@ const runAgent = (
           args: fc.args,
         }))
 
+        // Track pending tool calls in the guard
+        toolGuard.trackToolCalls(toolCallsWithIds)
+
         // Pass iteration context to tool wrappers
         const results = yield* executeTools(toolRegistry, toolCallsWithIds, {
           ...toolCtx,
           iteration: i,
         })
+
+        // Mark all tool calls as resolved
+        for (const tc of toolCallsWithIds) {
+          toolGuard.markResolved(tc.id)
+        }
 
         for (let j = 0; j < toolCallsWithIds.length; j++) {
           allToolCalls.push({ id: toolCallsWithIds[j].id, name: toolCallsWithIds[j].name, arguments: toolCallsWithIds[j].args })
@@ -296,6 +315,15 @@ const runAgent = (
     // If all iterations were consumed by tool calls, make one final text-only call
     // so the model can synthesize a response from the gathered tool results
     if (!finalContent && allToolCalls.length > 0) {
+      // Flush any pending (unresolved) tool calls before final synthesis
+      const pendingResults = toolGuard.flushPending()
+      if (pendingResults.length > 0) {
+        currentContents.push({
+          role: "user",
+          parts: pendingResults.map((r) => ({ functionResponse: r })),
+        })
+      }
+
       const finalResult = yield* pipe(
         callGeminiWithRetry(
           currentContents,

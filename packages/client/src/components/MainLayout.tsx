@@ -4,10 +4,13 @@ import { PrefetchLink } from "./PrefetchLink"
 import { personalInfo, socialLinks } from "@/config/personal"
 import {
   ChatTimeline,
+  AgentConfigPanel,
   ChatDataContext,
+  AgentConfigContext,
   SIDEBAR_NONE,
   type SidebarMode,
   type ChatDataContextValue,
+  type AgentConfigContextValue,
 } from "@/components/RightSidebar"
 import { LeftSidebar, MobileActivityPanel, type LeftSidebarData } from "@/components/LeftSidebar"
 
@@ -20,6 +23,7 @@ interface LayoutContext {
   readonly setNavContent: (content: ReactNode) => void
   readonly setSidebarMode: (mode: SidebarMode) => void
   readonly setChatData: (data: ChatDataContextValue) => void
+  readonly setAgentConfigData: (data: AgentConfigContextValue) => void
   readonly setLeftSidebarData: (data: LeftSidebarData | null) => void
 }
 
@@ -57,6 +61,11 @@ export function MainLayout() {
     isTyping: false,
     streamingContent: "",
   })
+  const [agentConfigData, setAgentConfigData] = useState<AgentConfigContextValue>({
+    soulState: null,
+    soulStage: "orb",
+    connectionState: "disconnected",
+  })
   const [leftSidebarData, setLeftSidebarData] = useState<LeftSidebarData | null>(null)
 
   // Track scroll progress for the progress indicator
@@ -79,8 +88,8 @@ export function MainLayout() {
 
   // Stable context value to avoid unnecessary re-renders
   const contextValue = useMemo<LayoutContext>(
-    () => ({ setNavContent, setSidebarMode, setChatData, setLeftSidebarData }),
-    [setNavContent, setSidebarMode, setChatData, setLeftSidebarData]
+    () => ({ setNavContent, setSidebarMode, setChatData, setAgentConfigData, setLeftSidebarData }),
+    [setNavContent, setSidebarMode, setChatData, setAgentConfigData, setLeftSidebarData]
   )
 
   // Memoize percentage display
@@ -114,6 +123,12 @@ export function MainLayout() {
               <ChatTimeline />
             </div>
           </ChatDataContext.Provider>
+        ) : sidebarMode.type === "agent-config" ? (
+          <AgentConfigContext.Provider value={agentConfigData}>
+            <div className="flex-1 min-h-0">
+              <AgentConfigPanel />
+            </div>
+          </AgentConfigContext.Provider>
         ) : (
           /* Fallback: scroll progress indicator */
           <div className="flex-1 flex flex-col items-center pt-6 pb-12 pointer-events-none select-none">

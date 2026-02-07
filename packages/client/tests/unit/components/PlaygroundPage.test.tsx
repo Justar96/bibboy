@@ -91,6 +91,8 @@ vi.mock("../../../src/hooks/useWebSocketChat", () => ({
     canvasBlueprint: null,
     canvasVersion: null,
     lastCanvasOp: null,
+    soulState: null,
+    soulStage: null,
   }),
 }))
 
@@ -108,6 +110,8 @@ vi.mock("../../../src/hooks/usePromptSuggestions", () => ({
 vi.mock("../../../src/components/MainLayout", () => ({
   useLayoutNav: () => ({
     setNavContent: vi.fn(),
+    setSidebarMode: vi.fn(),
+    setAgentConfigData: vi.fn(),
     setLeftSidebarData: vi.fn(),
   }),
 }))

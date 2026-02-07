@@ -28,6 +28,7 @@ export class TargetCharacter extends Phaser.GameObjects.Container {
         outfit: { ...blueprint.layers.outfit },
         accessory: { ...blueprint.layers.accessory },
       },
+      ...(blueprint.visibility ? { visibility: { ...blueprint.visibility } } : {}),
     }
     this.redraw()
     this.applyAnimation(this.blueprint.animation)
@@ -60,6 +61,7 @@ export class TargetCharacter extends Phaser.GameObjects.Container {
     const outfit = this.blueprint.layers.outfit.color
     const accessory = this.blueprint.layers.accessory.color
     const outline = 0x1a1a1a
+    const vis = this.blueprint.visibility
 
     const baseLegHeight = this.blueprint.pose === "sit" ? 2 : 4
     const bodyWidth = this.blueprint.layers.body.variant === "slim" ? 3 : 4
@@ -70,27 +72,33 @@ export class TargetCharacter extends Phaser.GameObjects.Container {
     const torsoTop = legsTop - 5 * CELL
     const headTop = torsoTop - 4 * CELL
 
-    // Legs
-    this.fillRect(bodyLeft, legsTop, CELL, baseLegHeight * CELL, outfit)
-    this.fillRect(bodyLeft + (bodyWidth - 1) * CELL, legsTop, CELL, baseLegHeight * CELL, outfit)
+    // Outfit layer: Legs, Torso, Arms
+    if (vis?.outfit !== false) {
+      this.fillRect(bodyLeft, legsTop, CELL, baseLegHeight * CELL, outfit)
+      this.fillRect(bodyLeft + (bodyWidth - 1) * CELL, legsTop, CELL, baseLegHeight * CELL, outfit)
+      this.fillRect(bodyLeft, torsoTop, bodyWidth * CELL, 5 * CELL, outfit)
+      this.drawArms(bodyLeft, torsoTop, bodyWidth, outfit, this.blueprint.pose)
+    }
 
-    // Torso
-    this.fillRect(bodyLeft, torsoTop, bodyWidth * CELL, 5 * CELL, outfit)
+    // Body layer: Head
+    if (vis?.body !== false) {
+      this.fillRect(bodyLeft, headTop, bodyWidth * CELL, 4 * CELL, skin)
+    }
 
-    // Arms by pose
-    this.drawArms(bodyLeft, torsoTop, bodyWidth, outfit, this.blueprint.pose)
+    // Hair layer
+    if (vis?.hair !== false) {
+      this.drawHair(bodyLeft, headTop, bodyWidth, hair)
+    }
 
-    // Head
-    this.fillRect(bodyLeft, headTop, bodyWidth * CELL, 4 * CELL, skin)
+    // Eyes layer
+    if (vis?.eyes !== false) {
+      this.drawEyes(bodyLeft, headTop, bodyWidth, eye)
+    }
 
-    // Hair variants
-    this.drawHair(bodyLeft, headTop, bodyWidth, hair)
-
-    // Eyes variants
-    this.drawEyes(bodyLeft, headTop, bodyWidth, eye)
-
-    // Accessory variants
-    this.drawAccessory(bodyLeft, headTop, bodyWidth, accessory)
+    // Accessory layer
+    if (vis?.accessory !== false) {
+      this.drawAccessory(bodyLeft, headTop, bodyWidth, accessory)
+    }
 
     // Outline frame
     this.graphics.lineStyle(1, outline, 0.45)

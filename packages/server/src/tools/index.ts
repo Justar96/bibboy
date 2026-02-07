@@ -335,3 +335,8 @@ export {
   type CompiledPattern,
   type ToolPolicy,
 } from "./tool-policy"
+// New modules (OpenClaw-inspired)
+export { wrapToolWithErrorSafety, toSafeToolDefinitions, sanitizeToolResultText, sanitizeToolErrorMessage, makeMissingToolResult } from "./tool-definition-adapter"
+export { resolveToolDisplay, formatToolSummary, formatToolCallSummary, type ResolvedToolDisplay } from "./tool-display"
+export { buildToolSummaryMap, buildToolListingForPrompt } from "./tool-summaries"
+export { createToolResultGuard, repairTranscript, isTranscriptValid, type ToolResultGuard } from "./tool-result-guard"

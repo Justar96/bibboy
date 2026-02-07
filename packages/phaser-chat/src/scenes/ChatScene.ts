@@ -5,7 +5,7 @@ import { SpeechBubble } from "../ui/SpeechBubble"
 
 const GROUND_Y_OFFSET = 40
 const BOY_MARGIN = 80
-const SPRITE_HEIGHT = 5 * 4 * 2 + 12 // orb radius + aura + margin
+const SPRITE_HEIGHT = 16 * 3 / 2 + 12 // half sprite height (scaled) + aura + margin
 
 const ENTRANCE_START_X = -30
 const BUBBLE_GAP = 12

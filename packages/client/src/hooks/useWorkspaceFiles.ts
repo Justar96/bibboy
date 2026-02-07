@@ -9,6 +9,7 @@ export interface WorkspaceFile {
   readonly name: string
   readonly path: string
   readonly content: string
+  readonly isDefault?: boolean
 }
 
 /** API response for workspace files */
@@ -35,6 +36,10 @@ export interface UseWorkspaceFilesResult {
   readonly error: string | null
   /** Refetch all files */
   readonly refetch: () => void
+  /** Delete a file (resets to default if persona file) */
+  readonly deleteFile: (filename: string) => Promise<void>
+  /** Reset all workspace files to defaults */
+  readonly resetAll: () => Promise<void>
 }
 
 /** Default agent ID constant */
@@ -180,5 +185,43 @@ export function useWorkspaceFiles(agentId: string = DEFAULT_AGENT_ID): UseWorksp
     void fetchFiles(controller.signal)
   }, [fetchFiles])
 
-  return { files, soulContent, isLoading, error, refetch } as const
+  const deleteFile = useCallback(async (filename: string): Promise<void> => {
+    try {
+      const response = await fetch("/api/workspace/file/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentId, filename }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete file: ${response.status}`)
+      }
+
+      // Refetch files to reflect changes
+      refetch()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete file")
+    }
+  }, [agentId, refetch])
+
+  const resetAll = useCallback(async (): Promise<void> => {
+    try {
+      const response = await fetch("/api/workspace/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentId }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to reset workspace: ${response.status}`)
+      }
+
+      // Refetch files to reflect changes
+      refetch()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reset workspace")
+    }
+  }, [agentId, refetch])
+
+  return { files, soulContent, isLoading, error, refetch, deleteFile, resetAll } as const
 }

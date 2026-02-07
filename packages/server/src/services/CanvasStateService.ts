@@ -6,7 +6,9 @@ import type {
 } from "@bibboy/shared"
 import {
   CANVAS_PALETTE_PRESETS,
+  DEFAULT_LAYER_VISIBILITY,
   createDefaultCanvasBlueprint,
+  createRandomCanvasBlueprint,
   isHexColor,
 } from "@bibboy/shared"
 
@@ -70,6 +72,7 @@ function cloneBlueprint(blueprint: CanvasCharacterBlueprint): CanvasCharacterBlu
       outfit: { ...blueprint.layers.outfit },
       accessory: { ...blueprint.layers.accessory },
     },
+    ...(blueprint.visibility ? { visibility: { ...blueprint.visibility } } : {}),
   }
 }
 
@@ -167,6 +170,18 @@ function applyOpToBlueprint(
     }
     case "reset_character": {
       nextBlueprint = createDefaultCanvasBlueprint()
+      break
+    }
+    case "set_layer_visibility": {
+      const currentVisibility = nextBlueprint.visibility ?? { ...DEFAULT_LAYER_VISIBILITY }
+      nextBlueprint = {
+        ...nextBlueprint,
+        visibility: { ...currentVisibility, [op.layer]: op.visible },
+      }
+      break
+    }
+    case "randomize_character": {
+      nextBlueprint = createRandomCanvasBlueprint()
       break
     }
     default: {

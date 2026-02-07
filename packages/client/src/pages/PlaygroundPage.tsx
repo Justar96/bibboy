@@ -1,20 +1,22 @@
-import { useState, useCallback, useRef, useEffect, useMemo, memo, lazy, Suspense } from "react"
-import type { ChatMessage as ChatMessageType } from "@bibboy/shared"
-import { ChatThread, ChatInput, ToolOutputSidebar } from "@/components/Chat"
-import type { SidebarContent, ChatQueueItem } from "@/components/Chat"
-import { useChatMemory } from "@/hooks/useChatMemory"
-import { useAgentChat } from "@/hooks/useAgentChat"
-import { useWebSocketChat, type ToolExecution } from "@/hooks/useWebSocketChat"
-import { usePromptSuggestions } from "@/hooks/usePromptSuggestions"
-import { useActivityLog } from "@/hooks/useActivityLog"
-import { useTaskList } from "@/hooks/useTaskList"
-import { useLayoutNav } from "@/components/MainLayout"
-import type { LeftSidebarData } from "@/components/LeftSidebar"
-import { PrefetchLink } from "@/components/PrefetchLink"
+import { useState, useCallback, useRef, useEffect, useMemo, memo, lazy, Suspense } from "react";
+import type { ChatMessage as ChatMessageType } from "@bibboy/shared";
+import { ChatThread, ChatInput, ToolOutputSidebar } from "@/components/Chat";
+import type { SidebarContent, ChatQueueItem } from "@/components/Chat";
+import { useChatMemory } from "@/hooks/useChatMemory";
+import { useAgentChat } from "@/hooks/useAgentChat";
+import { useWebSocketChat, type ToolExecution } from "@/hooks/useWebSocketChat";
+import { usePromptSuggestions } from "@/hooks/usePromptSuggestions";
+import { useActivityLog } from "@/hooks/useActivityLog";
+import { useTaskList } from "@/hooks/useTaskList";
+import { useAutoIngestTaskSuggestions } from "@/hooks/task-suggest-ingestion";
+import { useLayoutNav } from "@/components/MainLayout";
+import { SIDEBAR_AGENT_CONFIG } from "@/components/RightSidebar";
+import type { LeftSidebarData } from "@/components/LeftSidebar";
+import { PrefetchLink } from "@/components/PrefetchLink";
 
 const PhaserBuilderCanvas = lazy(() =>
-  import("@bibboy/phaser-chat").then((m) => ({ default: m.PhaserBuilderCanvas }))
-)
+  import("@bibboy/phaser-chat").then((m) => ({ default: m.PhaserBuilderCanvas })),
+);
 
 // ============================================================================
 // Config
@@ -24,11 +26,11 @@ const PhaserBuilderCanvas = lazy(() =>
 const USE_HTTP_FALLBACK =
   typeof window !== "undefined"
     ? new URLSearchParams(window.location.search).get("http") === "true"
-    : false
-const USE_WEBSOCKET_CHAT = !USE_HTTP_FALLBACK
+    : false;
+const USE_WEBSOCKET_CHAT = !USE_HTTP_FALLBACK;
 
 /** Map of message ID → associated tool executions */
-export type MessageToolsMap = Map<string, ToolExecution[]>
+export type MessageToolsMap = Map<string, ToolExecution[]>;
 
 // ============================================================================
 // Helpers
@@ -41,10 +43,10 @@ export type MessageToolsMap = Map<string, ToolExecution[]>
 // ============================================================================
 
 interface PlaygroundNavProps {
-  readonly hasMessages: boolean
-  readonly onNewChat: () => void
-  readonly connectionState: string
-  readonly onReconnect: () => void
+  readonly hasMessages: boolean;
+  readonly onNewChat: () => void;
+  readonly connectionState: string;
+  readonly onReconnect: () => void;
 }
 
 const PlaygroundNav = memo(function PlaygroundNav({
@@ -89,8 +91,8 @@ const PlaygroundNav = memo(function PlaygroundNav({
         )}
       </div>
     </div>
-  )
-})
+  );
+});
 
 // ============================================================================
 // Tool Tracking Hooks
@@ -101,36 +103,32 @@ const PlaygroundNav = memo(function PlaygroundNav({
  * Returns the map and update helpers for both HTTP and WS transports.
  */
 function useToolTracking() {
-  const [messageToolsMap, setMessageToolsMap] = useState<MessageToolsMap>(
-    new Map(),
-  )
-  const currentToolsRef = useRef<ToolExecution[]>([])
+  const [messageToolsMap, setMessageToolsMap] = useState<MessageToolsMap>(new Map());
+  const currentToolsRef = useRef<ToolExecution[]>([]);
 
   const snapshotAndClear = useCallback((messageId: string) => {
-    if (currentToolsRef.current.length === 0) return
-    const tools = [...currentToolsRef.current]
+    if (currentToolsRef.current.length === 0) return;
+    const tools = [...currentToolsRef.current];
     setMessageToolsMap((prev) => {
-      const next = new Map(prev)
-      next.set(messageId, tools)
-      return next
-    })
-    currentToolsRef.current = []
-  }, [])
+      const next = new Map(prev);
+      next.set(messageId, tools);
+      return next;
+    });
+    currentToolsRef.current = [];
+  }, []);
 
   const trackToolStart = useCallback((tool: ToolExecution) => {
-    currentToolsRef.current = [...currentToolsRef.current, tool]
-  }, [])
+    currentToolsRef.current = [...currentToolsRef.current, tool];
+  }, []);
 
   const trackToolEnd = useCallback((tool: ToolExecution) => {
-    currentToolsRef.current = currentToolsRef.current.map((t) =>
-      t.id === tool.id ? tool : t,
-    )
-  }, [])
+    currentToolsRef.current = currentToolsRef.current.map((t) => (t.id === tool.id ? tool : t));
+  }, []);
 
   const reset = useCallback(() => {
-    setMessageToolsMap(new Map())
-    currentToolsRef.current = []
-  }, [])
+    setMessageToolsMap(new Map());
+    currentToolsRef.current = [];
+  }, []);
 
   return {
     messageToolsMap,
@@ -140,7 +138,7 @@ function useToolTracking() {
     trackToolEnd,
     resetTools: reset,
     currentToolsRef,
-  }
+  };
 }
 
 // ============================================================================
@@ -148,29 +146,28 @@ function useToolTracking() {
 // ============================================================================
 
 export function PlaygroundPage() {
-  const { messages: httpMessages, addMessage, clearMessages: clearHttpMessages } =
-    useChatMemory()
-  const [error, setError] = useState<string | null>(null)
-  const { setNavContent, setLeftSidebarData } = useLayoutNav()
+  const { messages: httpMessages, addMessage, clearMessages: clearHttpMessages } = useChatMemory();
+  const [error, setError] = useState<string | null>(null);
+  const { setNavContent, setSidebarMode, setAgentConfigData, setLeftSidebarData } = useLayoutNav();
 
   // Tool output sidebar state (OpenClaw pattern)
-  const [sidebarContent, setSidebarContent] = useState<SidebarContent | null>(null)
-  const [splitRatio, setSplitRatio] = useState(0.6)
+  const [sidebarContent, setSidebarContent] = useState<SidebarContent | null>(null);
+  const [splitRatio, setSplitRatio] = useState(0.6);
 
   // Message queue for messages sent while agent is busy
-  const [chatQueue, setChatQueue] = useState<ChatQueueItem[]>([])
+  const [chatQueue, setChatQueue] = useState<ChatQueueItem[]>([]);
 
   const handleOpenSidebar = useCallback((title: string, content: string) => {
-    setSidebarContent({ title, content })
-  }, [])
+    setSidebarContent({ title, content });
+  }, []);
 
   const handleCloseSidebar = useCallback(() => {
-    setSidebarContent(null)
-  }, [])
+    setSidebarContent(null);
+  }, []);
 
   const handleQueueRemove = useCallback((id: string) => {
-    setChatQueue((prev) => prev.filter((item) => item.id !== id))
-  }, [])
+    setChatQueue((prev) => prev.filter((item) => item.id !== id));
+  }, []);
 
   const {
     messageToolsMap,
@@ -180,11 +177,11 @@ export function PlaygroundPage() {
     trackToolEnd,
     resetTools,
     currentToolsRef,
-  } = useToolTracking()
+  } = useToolTracking();
 
   // WS tool tracking refs
-  const wsActiveToolsRef = useRef<ToolExecution[]>([])
-  const prevWsMessageCountRef = useRef(0)
+  const wsActiveToolsRef = useRef<ToolExecution[]>([]);
+  const prevWsMessageCountRef = useRef(0);
 
   // ------------------------------------------------------------------
   // WebSocket Chat
@@ -194,38 +191,53 @@ export function PlaygroundPage() {
     autoConnect: USE_WEBSOCKET_CHAT,
     onError: (err) => setError(err.message),
     onSessionResumed: (count) => {
-      console.log(`Session resumed with ${count} messages`)
+      console.log(`Session resumed with ${count} messages`);
     },
-  })
+  });
+
+  // Set right sidebar to agent config
+  useEffect(() => {
+    setSidebarMode(SIDEBAR_AGENT_CONFIG);
+    return () => setSidebarMode({ type: "none" });
+  }, [setSidebarMode]);
+
+  // Push agent config data to sidebar context
+  useEffect(() => {
+    setAgentConfigData({
+      soulState: wsChat.soulState,
+      soulStage: wsChat.soulStage ?? "orb",
+      connectionState: USE_WEBSOCKET_CHAT ? wsChat.connectionState : "connected",
+    });
+  }, [wsChat.soulState, wsChat.soulStage, wsChat.connectionState, setAgentConfigData]);
 
   // Keep ref in sync so we can snapshot before hook clears them
   useEffect(() => {
     if (wsChat.activeTools.length > 0) {
-      wsActiveToolsRef.current = wsChat.activeTools
+      wsActiveToolsRef.current = wsChat.activeTools;
     }
-  }, [wsChat.activeTools])
+  }, [wsChat.activeTools]);
 
   // Associate tools when new assistant message appears via WS
   useEffect(() => {
-    if (!USE_WEBSOCKET_CHAT) return
-    const msgs = wsChat.messages
-    const prevCount = prevWsMessageCountRef.current
-    prevWsMessageCountRef.current = msgs.length
+    if (!USE_WEBSOCKET_CHAT) return;
+    const msgs = wsChat.messages;
+    const prevCount = prevWsMessageCountRef.current;
+    prevWsMessageCountRef.current = msgs.length;
 
     if (msgs.length > prevCount) {
       for (const msg of msgs.slice(prevCount)) {
         if (msg.role === "assistant" && wsActiveToolsRef.current.length > 0) {
-          const tools = [...wsActiveToolsRef.current]
+          const tools = [...wsActiveToolsRef.current];
           setMessageToolsMap((prev) => {
-            const next = new Map(prev)
-            next.set(msg.id, tools)
-            return next
-          })
-          wsActiveToolsRef.current = []
+            const next = new Map(prev);
+            next.set(msg.id, tools);
+            return next;
+          });
+          wsActiveToolsRef.current = [];
         }
       }
     }
-  }, [wsChat.messages, setMessageToolsMap])
+  }, [wsChat.messages, setMessageToolsMap]);
 
   // ------------------------------------------------------------------
   // HTTP Chat (fallback)
@@ -233,33 +245,29 @@ export function PlaygroundPage() {
 
   const httpChat = useAgentChat({
     onComplete: (message) => {
-      snapshotAndClear(message.id)
-      addMessage(message)
+      snapshotAndClear(message.id);
+      addMessage(message);
     },
     onError: (errorMsg) => {
-      currentToolsRef.current = []
-      setError(errorMsg)
+      currentToolsRef.current = [];
+      setError(errorMsg);
     },
     onToolStart: trackToolStart,
     onToolEnd: trackToolEnd,
-  })
+  });
 
   // ------------------------------------------------------------------
   // Unified Interface
   // ------------------------------------------------------------------
 
-  const messages = USE_WEBSOCKET_CHAT ? wsChat.messages : httpMessages
-  const isStreaming = USE_WEBSOCKET_CHAT ? wsChat.isTyping : httpChat.isStreaming
-  const stream = USE_WEBSOCKET_CHAT
-    ? wsChat.streamingContent
-    : httpChat.stream
-  const activeTools = USE_WEBSOCKET_CHAT
-    ? wsChat.activeTools
-    : httpChat.activeTools
+  const messages = USE_WEBSOCKET_CHAT ? wsChat.messages : httpMessages;
+  const isStreaming = USE_WEBSOCKET_CHAT ? wsChat.isTyping : httpChat.isStreaming;
+  const stream = USE_WEBSOCKET_CHAT ? wsChat.streamingContent : httpChat.stream;
+  const activeTools = USE_WEBSOCKET_CHAT ? wsChat.activeTools : httpChat.activeTools;
 
   const sendMessage = useCallback(
     async (content: string) => {
-      setError(null)
+      setError(null);
 
       // Queue if agent is busy (OpenClaw pattern)
       if (isStreaming) {
@@ -270,17 +278,15 @@ export function PlaygroundPage() {
             text: content.trim(),
             createdAt: Date.now(),
           },
-        ])
-        return
+        ]);
+        return;
       }
 
       if (USE_WEBSOCKET_CHAT) {
         try {
-          await wsChat.sendMessage(content)
+          await wsChat.sendMessage(content);
         } catch (err) {
-          setError(
-            err instanceof Error ? err.message : "Failed to send message",
-          )
+          setError(err instanceof Error ? err.message : "Failed to send message");
         }
       } else {
         const userMessage: ChatMessageType = {
@@ -288,42 +294,42 @@ export function PlaygroundPage() {
           role: "user",
           content,
           timestamp: Date.now(),
-        }
-        addMessage(userMessage)
+        };
+        addMessage(userMessage);
         await httpChat.sendMessage({
           message: content,
           history: [...httpMessages, userMessage],
-        })
+        });
       }
     },
     [httpMessages, addMessage, httpChat, wsChat, isStreaming],
-  )
+  );
 
   const handleNewChat = useCallback(() => {
-    setError(null)
-    resetTools()
-    setSidebarContent(null)
-    setChatQueue([])
+    setError(null);
+    resetTools();
+    setSidebarContent(null);
+    setChatQueue([]);
 
     if (USE_WEBSOCKET_CHAT) {
-      wsChat.clearMessages()
+      wsChat.clearMessages();
     } else {
-      clearHttpMessages()
-      httpChat.abort()
+      clearHttpMessages();
+      httpChat.abort();
     }
-  }, [clearHttpMessages, httpChat, wsChat, resetTools])
+  }, [clearHttpMessages, httpChat, wsChat, resetTools]);
 
   const handleReconnect = useCallback(() => {
-    wsChat.connect()
-  }, [wsChat])
+    wsChat.connect();
+  }, [wsChat]);
 
   const handleAbort = useCallback(() => {
     if (USE_WEBSOCKET_CHAT) {
-      wsChat.cancelMessage()
+      wsChat.cancelMessage();
     } else {
-      httpChat.abort()
+      httpChat.abort();
     }
-  }, [wsChat, httpChat])
+  }, [wsChat, httpChat]);
 
   // ------------------------------------------------------------------
   // Activity Log + Task List → Left Sidebar
@@ -335,43 +341,48 @@ export function PlaygroundPage() {
     isTyping: isStreaming,
     typingState: USE_WEBSOCKET_CHAT ? wsChat.typingState : null,
     isCompacting: USE_WEBSOCKET_CHAT ? wsChat.isCompacting : false,
-  })
+  });
 
-  const taskList = useTaskList()
+  const taskList = useTaskList();
+  useAutoIngestTaskSuggestions({
+    activeTools,
+    ingestSuggestedTasks: taskList.ingestSuggestedTasks,
+  });
 
   const leftSidebarData = useMemo<LeftSidebarData>(
     () => ({
       activityGroups,
       tasks: taskList.tasks,
       pendingCount: taskList.pendingCount,
+      onAddTask: taskList.addTask,
       onUpdateStatus: taskList.updateStatus,
       onAcceptTask: taskList.acceptTask,
       onDismissTask: taskList.dismissTask,
       onDeleteTask: taskList.deleteTask,
     }),
     [activityGroups, taskList],
-  )
+  );
 
   useEffect(() => {
-    setLeftSidebarData(leftSidebarData)
-    return () => setLeftSidebarData(null)
-  }, [leftSidebarData, setLeftSidebarData])
+    setLeftSidebarData(leftSidebarData);
+    return () => setLeftSidebarData(null);
+  }, [leftSidebarData, setLeftSidebarData]);
 
   // Flush queue when agent finishes (OpenClaw pattern)
-  const prevStreamingRef = useRef(isStreaming)
+  const prevStreamingRef = useRef(isStreaming);
   useEffect(() => {
-    const wasStreaming = prevStreamingRef.current
-    prevStreamingRef.current = isStreaming
+    const wasStreaming = prevStreamingRef.current;
+    prevStreamingRef.current = isStreaming;
 
     if (wasStreaming && !isStreaming && chatQueue.length > 0) {
-      const [next, ...rest] = chatQueue
-      setChatQueue(rest)
+      const [next, ...rest] = chatQueue;
+      setChatQueue(rest);
       // Small delay to let the UI settle
       setTimeout(() => {
-        sendMessage(next.text)
-      }, 100)
+        sendMessage(next.text);
+      }, 100);
     }
-  }, [isStreaming, chatQueue, sendMessage])
+  }, [isStreaming, chatQueue, sendMessage]);
 
   // ------------------------------------------------------------------
   // Nav
@@ -382,28 +393,20 @@ export function PlaygroundPage() {
       <PlaygroundNav
         hasMessages={messages.length > 0}
         onNewChat={handleNewChat}
-        connectionState={
-          USE_WEBSOCKET_CHAT ? wsChat.connectionState : "connected"
-        }
+        connectionState={USE_WEBSOCKET_CHAT ? wsChat.connectionState : "connected"}
         onReconnect={handleReconnect}
       />,
-    )
-    return () => setNavContent(null)
-  }, [
-    messages.length,
-    handleNewChat,
-    wsChat.connectionState,
-    handleReconnect,
-    setNavContent,
-  ])
+    );
+    return () => setNavContent(null);
+  }, [messages.length, handleNewChat, wsChat.connectionState, handleReconnect, setNavContent]);
 
   // ------------------------------------------------------------------
   // Render
   // ------------------------------------------------------------------
 
-  const showEmptyState = messages.length === 0 && !isStreaming
+  const showEmptyState = messages.length === 0 && !isStreaming;
   const { suggestions: promptSuggestions, isLoading: isSuggestionsLoading } =
-    usePromptSuggestions()
+    usePromptSuggestions();
 
   return (
     <section className="min-h-[calc(100vh-200px)] lg:min-h-[calc(100vh-180px)] flex flex-col">
@@ -449,39 +452,33 @@ export function PlaygroundPage() {
       <div className={`mt-auto ${showEmptyState ? "pt-6" : "pt-8"}`}>
         <ChatInput
           onSend={sendMessage}
-          disabled={
-            USE_WEBSOCKET_CHAT && wsChat.connectionState !== "connected"
-          }
+          disabled={USE_WEBSOCKET_CHAT && wsChat.connectionState !== "connected"}
           placeholder="Ask me anything..."
           isBusy={isStreaming}
           onAbort={handleAbort}
-          connectionState={
-            USE_WEBSOCKET_CHAT ? wsChat.connectionState : "connected"
-          }
+          connectionState={USE_WEBSOCKET_CHAT ? wsChat.connectionState : "connected"}
           onReconnect={handleReconnect}
           queue={chatQueue}
           onQueueRemove={handleQueueRemove}
         />
 
         {/* Prompt suggestions */}
-        {showEmptyState &&
-          !isSuggestionsLoading &&
-          promptSuggestions.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-4">
-              {promptSuggestions.map((prompt) => (
-                <button
-                  key={prompt}
-                  onClick={() => sendMessage(prompt)}
-                  className="px-3 py-1.5 font-mono text-[11px] text-[#999999] hover:text-[#0066CC] bg-[#FAFAFA] hover:bg-[#F0F4FF] border border-[#E8E8E8] hover:border-[#0066CC]/30 rounded transition-all"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          )}
+        {showEmptyState && !isSuggestionsLoading && promptSuggestions.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-4">
+            {promptSuggestions.map((prompt) => (
+              <button
+                key={prompt}
+                onClick={() => sendMessage(prompt)}
+                className="px-3 py-1.5 font-mono text-[11px] text-[#999999] hover:text-[#0066CC] bg-[#FAFAFA] hover:bg-[#F0F4FF] border border-[#E8E8E8] hover:border-[#0066CC]/30 rounded transition-all"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </section>
-  )
+  );
 }
 
-export default PlaygroundPage
+export default PlaygroundPage;

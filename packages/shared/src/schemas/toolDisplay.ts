@@ -264,6 +264,81 @@ export const TOOL_DISPLAY_CONFIG: Record<string, ToolDisplayConfig> = {
       error: "bg-red-50 border-red-200 text-red-700",
     },
   },
+  canvas_batch_ops: {
+    emoji: "⚡",
+    icon: "sparkles",
+    label: "Batch Edit",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    resultKeys: ["applied"],
+  },
+  canvas_randomize_character: {
+    emoji: "🎲",
+    icon: "sparkles",
+    label: "Randomize",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+  },
+  canvas_describe_character: {
+    emoji: "📝",
+    icon: "sparkles",
+    label: "Describe",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    resultKeys: ["description"],
+  },
+  canvas_adjust_color: {
+    emoji: "🎛️",
+    icon: "palette",
+    label: "Adjust Color",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["layer", "adjustment"],
+  },
+  canvas_set_layer_visibility: {
+    emoji: "👁️",
+    icon: "sparkles",
+    label: "Visibility",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["layer", "visible"],
+  },
+  canvas_cycle_variant: {
+    emoji: "🔄",
+    icon: "paintbrush",
+    label: "Cycle Variant",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+    argKeys: ["layer", "direction"],
+  },
+  canvas_import_blueprint: {
+    emoji: "📥",
+    icon: "file",
+    label: "Import Blueprint",
+    colors: {
+      running: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      completed: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      error: "bg-red-50 border-red-200 text-red-700",
+    },
+  },
 
   // Soul evolution tools
   soul_observe_trait: {

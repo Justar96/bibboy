@@ -12,6 +12,7 @@ export interface WorkspaceFile {
   name: string
   path: string
   content: string
+  isDefault?: boolean
 }
 
 export interface EmbeddedContextFile {
@@ -308,10 +309,13 @@ export const listWorkspaceFilesEffect = (
         const content = yield* readFileStringSafe(fs, filePath)
 
         if (content) {
+          const defaultTemplate = DEFAULT_TEMPLATES[entry]
+          const isDefault = defaultTemplate !== undefined && content.trim() === defaultTemplate.trim()
           files.push({
             name: entry,
             path: filePath,
             content,
+            isDefault,
           })
         }
       }
@@ -349,10 +353,14 @@ export const readWorkspaceFileEffect = (
       return null
     }
 
+    const defaultTemplate = DEFAULT_TEMPLATES[filename]
+    const isDefault = defaultTemplate !== undefined && content.trim() === defaultTemplate.trim()
+
     return {
       name: filename,
       path: filePath,
       content,
+      isDefault,
     }
   })
 

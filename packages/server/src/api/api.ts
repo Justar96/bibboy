@@ -12,6 +12,8 @@ import {
   SuggestionsResponseSchema,
   WorkspaceFilesResponseSchema,
   WorkspaceFileResponseSchema,
+  WorkspaceDeleteResponseSchema,
+  WorkspaceResetResponseSchema,
   AgentRequestSchema,
   AgentResponseSchema,
   ApiKeyNotConfiguredErrorSchema,
@@ -88,6 +90,29 @@ const workspaceFileEndpoint = HttpApiEndpoint.get("workspaceFile", "/api/workspa
   .addError(ValidationErrorSchema, { status: 400 })
   .addError(FileNotFoundErrorSchema, { status: 404 })
 
+/**
+ * Delete a workspace file endpoint at /api/workspace/file/delete
+ * For default persona files, resets them to template instead of deleting.
+ */
+const workspaceDeleteFileEndpoint = HttpApiEndpoint.post("workspaceDeleteFile", "/api/workspace/file/delete")
+  .setPayload(Schema.Struct({
+    agentId: Schema.optional(Schema.String),
+    filename: Schema.String,
+  }))
+  .addSuccess(WorkspaceDeleteResponseSchema)
+  .addError(ValidationErrorSchema, { status: 400 })
+  .addError(FileNotFoundErrorSchema, { status: 404 })
+
+/**
+ * Reset all workspace files to defaults at /api/workspace/reset
+ */
+const workspaceResetEndpoint = HttpApiEndpoint.post("workspaceReset", "/api/workspace/reset")
+  .setPayload(Schema.Struct({
+    agentId: Schema.optional(Schema.String),
+  }))
+  .addSuccess(WorkspaceResetResponseSchema)
+  .addError(ValidationErrorSchema, { status: 400 })
+
 // ============================================================================
 // API Group
 // ============================================================================
@@ -108,6 +133,8 @@ export const apiGroup = HttpApiGroup.make("api")
   // Workspace endpoints
   .add(workspaceFilesEndpoint)
   .add(workspaceFileEndpoint)
+  .add(workspaceDeleteFileEndpoint)
+  .add(workspaceResetEndpoint)
 
 // ============================================================================
 // API Definition

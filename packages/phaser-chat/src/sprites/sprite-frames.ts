@@ -564,3 +564,61 @@ export const TEXTURE_MAP = {
 } as const
 
 export type TextureKey = keyof typeof TEXTURE_MAP
+
+// ---------------------------------------------------------------------------
+// Soul orb palette for textures.generate()
+//   . = transparent
+//   0 = #1A1A2E  (outline / darkest)
+//   1 = #3A3F5C  (body dark)
+//   2 = #4A5070  (body mid / highlight)
+//   3 = #5C6188  (body light highlight)
+//   4 = #FFFFFF  (eye white)
+//   5 = #1A1A2E  (pupil — same as outline)
+//   6 = #2E3350  (body shadow)
+//   7–F unused, required by Phaser's palette type
+// ---------------------------------------------------------------------------
+
+export const SOUL_PALETTE: Phaser.Types.Create.Palette = {
+  "0": "#1A1A2E",
+  "1": "#3A3F5C",
+  "2": "#4A5070",
+  "3": "#5C6188",
+  "4": "#FFFFFF",
+  "5": "#1A1A2E",
+  "6": "#2E3350",
+  "7": "#555555",
+  "8": "#555555",
+  "9": "#555555",
+  A: "#555555",
+  B: "#555555",
+  C: "#555555",
+  D: "#555555",
+  E: "#555555",
+  F: "#555555",
+}
+
+// Soul orb idle frame (16×16) — matches leftmost frame of reference asset
+const SOUL_ORB_IDLE: readonly string[] = [
+  "................",
+  "......0000......",
+  "....00111100....",
+  "...0111321110...",
+  "..011132211110..",
+  "..011122111110..",
+  "..011145145110..",
+  "..011145145110..",
+  "..011111111110..",
+  "..011111111110..",
+  "..011161611110..",
+  "...0111111110...",
+  "....00111100....",
+  "......0000......",
+  "................",
+  "................",
+]
+
+export const SOUL_TEXTURE_MAP = {
+  "soul-orb-idle": SOUL_ORB_IDLE,
+} as const
+
+export type SoulTextureKey = keyof typeof SOUL_TEXTURE_MAP

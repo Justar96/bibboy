@@ -136,12 +136,31 @@ export const CanvasLayersSchema = Schema.Struct({
 
 export type CanvasLayers = Schema.Schema.Type<typeof CanvasLayersSchema>
 
+export const CanvasLayerVisibilitySchema = Schema.Struct({
+  body: Schema.Boolean,
+  hair: Schema.Boolean,
+  eyes: Schema.Boolean,
+  outfit: Schema.Boolean,
+  accessory: Schema.Boolean,
+})
+
+export type CanvasLayerVisibility = Schema.Schema.Type<typeof CanvasLayerVisibilitySchema>
+
+export const DEFAULT_LAYER_VISIBILITY: CanvasLayerVisibility = {
+  body: true,
+  hair: true,
+  eyes: true,
+  outfit: true,
+  accessory: true,
+}
+
 export const CanvasCharacterBlueprintSchema = Schema.Struct({
   entityId: Schema.String,
   palettePreset: CanvasPalettePresetIdSchema,
   pose: CanvasPoseIdSchema,
   animation: CanvasAnimationIdSchema,
   layers: CanvasLayersSchema,
+  visibility: Schema.optional(CanvasLayerVisibilitySchema),
 })
 
 export type CanvasCharacterBlueprint = Schema.Schema.Type<typeof CanvasCharacterBlueprintSchema>
@@ -217,6 +236,16 @@ export const CanvasUndoOpSchema = Schema.Struct({
   type: Schema.Literal("undo"),
 })
 
+export const CanvasSetLayerVisibilityOpSchema = Schema.Struct({
+  type: Schema.Literal("set_layer_visibility"),
+  layer: CanvasLayerIdSchema,
+  visible: Schema.Boolean,
+})
+
+export const CanvasRandomizeCharacterOpSchema = Schema.Struct({
+  type: Schema.Literal("randomize_character"),
+})
+
 export const CanvasOpSchema = Schema.Union(
   CanvasSetLayerVariantOpSchema,
   CanvasSetLayerColorOpSchema,
@@ -224,7 +253,9 @@ export const CanvasOpSchema = Schema.Union(
   CanvasSetPoseOpSchema,
   CanvasSetAnimationOpSchema,
   CanvasResetCharacterOpSchema,
-  CanvasUndoOpSchema
+  CanvasUndoOpSchema,
+  CanvasSetLayerVisibilityOpSchema,
+  CanvasRandomizeCharacterOpSchema
 )
 
 export type CanvasSetLayerVariantOp = Schema.Schema.Type<typeof CanvasSetLayerVariantOpSchema>
@@ -234,6 +265,8 @@ export type CanvasSetPoseOp = Schema.Schema.Type<typeof CanvasSetPoseOpSchema>
 export type CanvasSetAnimationOp = Schema.Schema.Type<typeof CanvasSetAnimationOpSchema>
 export type CanvasResetCharacterOp = Schema.Schema.Type<typeof CanvasResetCharacterOpSchema>
 export type CanvasUndoOp = Schema.Schema.Type<typeof CanvasUndoOpSchema>
+export type CanvasSetLayerVisibilityOp = Schema.Schema.Type<typeof CanvasSetLayerVisibilityOpSchema>
+export type CanvasRandomizeCharacterOp = Schema.Schema.Type<typeof CanvasRandomizeCharacterOpSchema>
 export type CanvasOp = Schema.Schema.Type<typeof CanvasOpSchema>
 
 // ============================================================================
@@ -300,6 +333,30 @@ export const isOutfitVariant = (v: string): v is OutfitVariant => layerVariantSe
 export const isAccessoryVariant = (v: string): v is AccessoryVariant => layerVariantSets.accessory.has(v)
 
 export const isHexColor = (value: string): boolean => HEX_COLOR_REGEX.test(value)
+
+function randomElement<T>(arr: readonly T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
+export function createRandomCanvasBlueprint(): CanvasCharacterBlueprint {
+  const paletteKeys = Object.keys(CANVAS_PALETTE_PRESETS) as CanvasPalettePresetId[]
+  const palettePreset = randomElement(paletteKeys)
+  const palette = CANVAS_PALETTE_PRESETS[palettePreset]
+
+  return {
+    entityId: "character_main",
+    palettePreset,
+    pose: randomElement(CANVAS_POSE_IDS),
+    animation: randomElement(CANVAS_ANIMATION_IDS),
+    layers: {
+      body: { variant: randomElement(BODY_VARIANTS), color: palette.skin },
+      hair: { variant: randomElement(HAIR_VARIANTS), color: palette.hair },
+      eyes: { variant: randomElement(EYES_VARIANTS), color: palette.eyes },
+      outfit: { variant: randomElement(OUTFIT_VARIANTS), color: palette.outfit },
+      accessory: { variant: randomElement(ACCESSORY_VARIANTS), color: palette.accessory },
+    },
+  }
+}
 
 export function createDefaultCanvasBlueprint(
   palettePreset: CanvasPalettePresetId = "classic"

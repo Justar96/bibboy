@@ -13,8 +13,9 @@
     "composite": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "types": ["bun"]
+    "types": ["bun"],
+    "resolveJsonModule": true
   },
-  "include": ["src"],
+  "include": ["src", "src/**/*.json"],
   "exclude": ["node_modules", "dist", "tests"]
 }

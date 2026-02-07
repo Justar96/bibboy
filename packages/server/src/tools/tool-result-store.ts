@@ -1,4 +1,5 @@
-import { writeWorkspaceFile } from "../workspace"
+import { Schema } from "effect";
+import { writeWorkspaceFile } from "../workspace";
 
 // ============================================================================
 // Tool Result Store
@@ -12,23 +13,23 @@ import { writeWorkspaceFile } from "../workspace"
 // ============================================================================
 
 /** Maximum chars for inline tool result (what goes into Gemini context) */
-const MAX_INLINE_RESULT_CHARS = 4_000
+const MAX_INLINE_RESULT_CHARS = 4_000;
 
 /** Maximum chars for web_fetch content before saving to file */
-const SAVE_THRESHOLD_CHARS = 3_000
+const SAVE_THRESHOLD_CHARS = 3_000;
 
 /**
  * Compute adaptive inline limit based on iteration count.
  * As iterations grow, compact more aggressively to preserve context.
  */
 function getAdaptiveInlineLimit(iteration: number): number {
-  if (iteration >= 20) return 1_000
-  if (iteration >= 10) return 2_000
-  return MAX_INLINE_RESULT_CHARS
+  if (iteration >= 20) return 1_000;
+  if (iteration >= 10) return 2_000;
+  return MAX_INLINE_RESULT_CHARS;
 }
 
 /** Session-scoped counter for unique filenames */
-let resultCounter = 0
+let resultCounter = 0;
 
 /**
  * Generate a short, filesystem-safe slug from a string.
@@ -38,7 +39,7 @@ function slugify(text: string, maxLen = 40): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, maxLen)
+    .slice(0, maxLen);
 }
 
 // ============================================================================
@@ -46,74 +47,104 @@ function slugify(text: string, maxLen = 40): string {
 // ============================================================================
 
 interface SearchResultItem {
-  title?: string
-  url?: string
-  description?: string
-  published?: string
-  siteName?: string
+  title?: string;
+  url?: string;
+  description?: string;
+  published?: string;
+  siteName?: string;
 }
 
 interface WebSearchPayload {
-  query?: string
-  provider?: string
-  count?: number
-  tookMs?: number
-  results?: SearchResultItem[]
-  cached?: boolean
-  disabled?: boolean
-  error?: string
+  query?: string;
+  provider?: string;
+  count?: number;
+  tookMs?: number;
+  results?: SearchResultItem[];
+  cached?: boolean;
+  disabled?: boolean;
+  error?: string;
 }
 
-type JsonRecord = Record<string, unknown>
+type JsonRecord = Record<string, unknown>;
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+const UnknownRecordSchema = Schema.Record({
+  key: Schema.String,
+  value: Schema.Unknown,
+});
+const UnknownArraySchema = Schema.Array(Schema.Unknown);
+
+const decodeUnknownRecord = Schema.decodeUnknownEither(UnknownRecordSchema);
+const decodeUnknownArray = Schema.decodeUnknownEither(UnknownArraySchema);
+const decodeUnknownString = Schema.decodeUnknownEither(Schema.String);
+const decodeUnknownNumber = Schema.decodeUnknownEither(Schema.Number);
+const decodeUnknownBoolean = Schema.decodeUnknownEither(Schema.Boolean);
+
+function toRecord(value: unknown): JsonRecord | null {
+  const decoded = decodeUnknownRecord(value);
+  return decoded._tag === "Right" ? decoded.right : null;
 }
 
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" ? value : undefined
+function toArray(value: unknown): unknown[] | null {
+  const decoded = decodeUnknownArray(value);
+  return decoded._tag === "Right" ? Array.from(decoded.right) : null;
 }
 
-function asNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined
+function toString(value: unknown): string | undefined {
+  const decoded = decodeUnknownString(value);
+  return decoded._tag === "Right" ? decoded.right : undefined;
 }
 
-function asBoolean(value: unknown): boolean | undefined {
-  return typeof value === "boolean" ? value : undefined
+function toNumber(value: unknown): number | undefined {
+  const decoded = decodeUnknownNumber(value);
+  if (decoded._tag !== "Right" || !Number.isFinite(decoded.right)) {
+    return undefined;
+  }
+
+  return decoded.right;
+}
+
+function toBoolean(value: unknown): boolean | undefined {
+  const decoded = decodeUnknownBoolean(value);
+  return decoded._tag === "Right" ? decoded.right : undefined;
 }
 
 function parseJsonRecord(raw: string): JsonRecord {
-  const parsed: unknown = JSON.parse(raw)
-  return isRecord(parsed) ? parsed : {}
+  const parsed: unknown = JSON.parse(raw);
+  const record = toRecord(parsed);
+  return record ?? {};
 }
 
 function parseSearchResultItems(value: unknown): SearchResultItem[] {
-  if (!Array.isArray(value)) {
-    return []
+  const parsedItems = toArray(value);
+  if (parsedItems === null) {
+    return [];
   }
 
-  return value.filter(isRecord).map((item) => ({
-    title: asString(item.title),
-    url: asString(item.url),
-    description: asString(item.description),
-    published: asString(item.published),
-    siteName: asString(item.siteName),
-  }))
+  return parsedItems
+    .map((item) => toRecord(item))
+    .filter((item): item is JsonRecord => item !== null)
+    .map((item) => ({
+      title: toString(item.title),
+      url: toString(item.url),
+      description: toString(item.description),
+      published: toString(item.published),
+      siteName: toString(item.siteName),
+    }));
 }
 
 function parseWebSearchPayload(raw: string): WebSearchPayload {
-  const record = parseJsonRecord(raw)
+  const record = parseJsonRecord(raw);
 
   return {
-    query: asString(record.query),
-    provider: asString(record.provider),
-    count: asNumber(record.count),
-    tookMs: asNumber(record.tookMs),
+    query: toString(record.query),
+    provider: toString(record.provider),
+    count: toNumber(record.count),
+    tookMs: toNumber(record.tookMs),
     results: parseSearchResultItems(record.results),
-    cached: asBoolean(record.cached),
-    disabled: asBoolean(record.disabled),
-    error: asString(record.error),
-  }
+    cached: toBoolean(record.cached),
+    disabled: toBoolean(record.disabled),
+    error: toString(record.error),
+  };
 }
 
 /**
@@ -125,7 +156,7 @@ function compactSearchResult(payload: WebSearchPayload): string {
     return JSON.stringify({
       query: payload.query,
       error: payload.error ?? "Search disabled",
-    })
+    });
   }
 
   const results = (payload.results ?? []).map((r, i) => ({
@@ -136,7 +167,7 @@ function compactSearchResult(payload: WebSearchPayload): string {
     ...(r.published ? { date: r.published } : {}),
     // Keep a short snippet (first 120 chars of description)
     snippet: r.description ? r.description.slice(0, 120) : "",
-  }))
+  }));
 
   return JSON.stringify({
     query: payload.query,
@@ -144,7 +175,7 @@ function compactSearchResult(payload: WebSearchPayload): string {
     count: payload.count,
     tookMs: payload.tookMs,
     results,
-  })
+  });
 }
 
 // ============================================================================
@@ -152,43 +183,43 @@ function compactSearchResult(payload: WebSearchPayload): string {
 // ============================================================================
 
 interface WebFetchPayload {
-  url?: string
-  finalUrl?: string
-  status?: number
-  contentType?: string
-  title?: string
-  extractMode?: string
-  extractor?: string
-  truncated?: boolean
-  length?: number
-  fetchedAt?: string
-  tookMs?: number
-  text?: string
-  cached?: boolean
-  disabled?: boolean
-  error?: string
+  url?: string;
+  finalUrl?: string;
+  status?: number;
+  contentType?: string;
+  title?: string;
+  extractMode?: string;
+  extractor?: string;
+  truncated?: boolean;
+  length?: number;
+  fetchedAt?: string;
+  tookMs?: number;
+  text?: string;
+  cached?: boolean;
+  disabled?: boolean;
+  error?: string;
 }
 
 function parseWebFetchPayload(raw: string): WebFetchPayload {
-  const record = parseJsonRecord(raw)
+  const record = parseJsonRecord(raw);
 
   return {
-    url: asString(record.url),
-    finalUrl: asString(record.finalUrl),
-    status: asNumber(record.status),
-    contentType: asString(record.contentType),
-    title: asString(record.title),
-    extractMode: asString(record.extractMode),
-    extractor: asString(record.extractor),
-    truncated: asBoolean(record.truncated),
-    length: asNumber(record.length),
-    fetchedAt: asString(record.fetchedAt),
-    tookMs: asNumber(record.tookMs),
-    text: asString(record.text),
-    cached: asBoolean(record.cached),
-    disabled: asBoolean(record.disabled),
-    error: asString(record.error),
-  }
+    url: toString(record.url),
+    finalUrl: toString(record.finalUrl),
+    status: toNumber(record.status),
+    contentType: toString(record.contentType),
+    title: toString(record.title),
+    extractMode: toString(record.extractMode),
+    extractor: toString(record.extractor),
+    truncated: toBoolean(record.truncated),
+    length: toNumber(record.length),
+    fetchedAt: toString(record.fetchedAt),
+    tookMs: toNumber(record.tookMs),
+    text: toString(record.text),
+    cached: toBoolean(record.cached),
+    disabled: toBoolean(record.disabled),
+    error: toString(record.error),
+  };
 }
 
 /**
@@ -197,7 +228,7 @@ function parseWebFetchPayload(raw: string): WebFetchPayload {
  */
 async function compactFetchResult(
   payload: WebFetchPayload,
-  agentId: string
+  agentId: string,
 ): Promise<{ summary: string; savedFile?: string }> {
   if (payload.error || payload.disabled) {
     return {
@@ -205,10 +236,10 @@ async function compactFetchResult(
         url: payload.url,
         error: payload.error ?? "Fetch disabled",
       }),
-    }
+    };
   }
 
-  const text = payload.text ?? ""
+  const text = payload.text ?? "";
 
   // Short content — return inline
   if (text.length < SAVE_THRESHOLD_CHARS) {
@@ -220,13 +251,13 @@ async function compactFetchResult(
         length: text.length,
         text,
       }),
-    }
+    };
   }
 
   // Long content — save to file, return compact summary
-  resultCounter++
-  const slug = slugify(payload.title || payload.url || "page")
-  const filename = `web-fetch-${resultCounter}-${slug}.md`
+  resultCounter++;
+  const slug = slugify(payload.title || payload.url || "page");
+  const filename = `web-fetch-${resultCounter}-${slug}.md`;
 
   // Build markdown file with metadata header
   const fileContent = [
@@ -245,12 +276,12 @@ async function compactFetchResult(
     text,
   ]
     .filter(Boolean)
-    .join("\n")
+    .join("\n");
 
-  await writeWorkspaceFile(agentId, filename, fileContent)
+  await writeWorkspaceFile(agentId, filename, fileContent);
 
   // Return summary with file reference and a preview
-  const preview = text.slice(0, 500).replace(/\n+/g, " ").trim()
+  const preview = text.slice(0, 500).replace(/\n+/g, " ").trim();
   return {
     summary: JSON.stringify({
       url: payload.url,
@@ -262,7 +293,7 @@ async function compactFetchResult(
       preview,
     }),
     savedFile: filename,
-  }
+  };
 }
 
 // ============================================================================
@@ -282,33 +313,33 @@ export async function compactToolResult(
   toolName: string,
   rawResultText: string,
   agentId: string,
-  iteration: number = 0
+  iteration: number = 0,
 ): Promise<string> {
-  const inlineLimit = getAdaptiveInlineLimit(iteration)
+  const inlineLimit = getAdaptiveInlineLimit(iteration);
   try {
     if (toolName === "web_search") {
-      const payload = parseWebSearchPayload(rawResultText)
-      return compactSearchResult(payload)
+      const payload = parseWebSearchPayload(rawResultText);
+      return compactSearchResult(payload);
     }
 
     if (toolName === "web_fetch") {
-      const payload = parseWebFetchPayload(rawResultText)
-      const { summary } = await compactFetchResult(payload, agentId)
-      return summary
+      const payload = parseWebFetchPayload(rawResultText);
+      const { summary } = await compactFetchResult(payload, agentId);
+      return summary;
     }
 
     // For all other tools: truncate if too large (adaptive limit)
     if (rawResultText.length > inlineLimit) {
-      return rawResultText.slice(0, inlineLimit) + "\n[...truncated]"
+      return rawResultText.slice(0, inlineLimit) + "\n[...truncated]";
     }
 
-    return rawResultText
+    return rawResultText;
   } catch {
     // If parsing fails, just truncate
     if (rawResultText.length > inlineLimit) {
-      return rawResultText.slice(0, inlineLimit) + "\n[...truncated]"
+      return rawResultText.slice(0, inlineLimit) + "\n[...truncated]";
     }
-    return rawResultText
+    return rawResultText;
   }
 }
 
@@ -317,5 +348,5 @@ export async function compactToolResult(
  * Call this at the end of a session or periodically.
  */
 export function resetResultCounter(): void {
-  resultCounter = 0
+  resultCounter = 0;
 }

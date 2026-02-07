@@ -316,6 +316,7 @@ export const WorkspaceFileSchema = Schema.Struct({
   name: Schema.String,
   path: Schema.String,
   content: Schema.String,
+  isDefault: Schema.optional(Schema.Boolean),
 })
 
 export type WorkspaceFileInfo = Schema.Schema.Type<typeof WorkspaceFileSchema>
@@ -337,6 +338,27 @@ export const WorkspaceFileResponseSchema = Schema.Struct({
 })
 
 export type WorkspaceFileResponse = Schema.Schema.Type<typeof WorkspaceFileResponseSchema>
+
+/**
+ * Schema for workspace file delete response.
+ */
+export const WorkspaceDeleteResponseSchema = Schema.Struct({
+  success: Schema.Boolean,
+  filename: Schema.String,
+  action: Schema.Union(Schema.Literal("deleted"), Schema.Literal("reset_to_default")),
+})
+
+export type WorkspaceDeleteResponse = Schema.Schema.Type<typeof WorkspaceDeleteResponseSchema>
+
+/**
+ * Schema for workspace reset response.
+ */
+export const WorkspaceResetResponseSchema = Schema.Struct({
+  success: Schema.Boolean,
+  filesReset: Schema.Array(Schema.String),
+})
+
+export type WorkspaceResetResponse = Schema.Schema.Type<typeof WorkspaceResetResponseSchema>
 
 // ============================================================================
 // API Error Schemas

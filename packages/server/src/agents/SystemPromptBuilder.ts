@@ -2,6 +2,8 @@ import type { ResolvedAgentConfig, ThinkingLevel } from "./AgentConfig"
 import type { CharacterState } from "@bibboy/shared"
 import type { ToolRegistry } from "../tools"
 import type { EmbeddedContextFile } from "../workspace"
+import { buildToolListingForPrompt } from "../tools/tool-summaries"
+import { TOOL_GROUPS } from "../tools/tool-policy"
 
 // ============================================================================
 // Types (matching OpenClaw)
@@ -63,41 +65,7 @@ export interface SystemPromptOptions {
   characterState?: CharacterState
 }
 
-// ============================================================================
-// Tool Summaries (matching OpenClaw's coreToolSummaries)
-// ============================================================================
-
-const CORE_TOOL_SUMMARIES: Record<string, string> = {
-  read: "Read file contents",
-  write: "Create or overwrite files",
-  edit: "Make precise edits to files",
-  grep: "Search file contents for patterns",
-  find: "Find files by glob pattern",
-  ls: "List directory contents",
-  exec: "Run shell commands",
-  web_search: "Search the web",
-  web_fetch: "Fetch and extract readable content from a URL",
-  browser: "Control web browser",
-  memory_search: "Search stored memories and context",
-  memory_get: "Retrieve specific content from memory files",
-  read_file: "Read a workspace file (SOUL.md, MEMORY.md, etc.)",
-  write_file: "Write or update a workspace file",
-  list_files: "List all workspace files",
-  reset_workspace: "Reset workspace files to defaults (clear context)",
-  set_character_pose: "Change the pixel avatar's pose or activity",
-  soul_observe_trait: "Record a personality trait observation about the user",
-  soul_get_state: "Get the current soul evolution state and traits",
-  canvas_get_state: "Get current realtime character builder state",
-  canvas_set_layer_variant: "Set a character layer variant",
-  canvas_set_layer_color: "Set a layer color with #RRGGBB",
-  canvas_set_palette: "Apply a named palette preset",
-  canvas_set_pose: "Set the target character pose",
-  canvas_set_animation: "Set the target character animation",
-  canvas_reset_character: "Reset the target character to defaults",
-  canvas_undo: "Undo last character mutation",
-  canvas_export_blueprint: "Export character blueprint JSON",
-  request_tools: "Load additional tool groups mid-conversation when you need capabilities not yet available",
-}
+// (Tool summaries are now generated dynamically by tool-summaries.ts from tool descriptions)
 
 // ============================================================================
 // Section Builders (matching OpenClaw structure)
@@ -268,13 +236,21 @@ export function buildAgentSystemPrompt(params: SystemPromptOptions): string {
     return "You are a personal assistant."
   }
 
-  // Build tool lines
+  // Build tool section using dynamic summaries (OpenClaw pattern)
   const toolNames = toolRegistry?.tools.map((t) => t.name) ?? []
   const availableTools = new Set(toolNames.map((n) => n.toLowerCase()))
-  const toolLines = toolNames.map((name) => {
-    const summary = CORE_TOOL_SUMMARIES[name]
-    return summary ? `- ${name}: ${summary}` : `- ${name}`
-  })
+
+  // Build group map for organized tool listing
+  const groupMap: Record<string, string[]> = {}
+  for (const [key, value] of Object.entries(TOOL_GROUPS)) {
+    const groupName = key.replace("group:", "")
+    groupMap[groupName] = value
+  }
+
+  // Use tool summaries builder for dynamic, description-aware listing
+  const toolListingSection = toolRegistry?.tools
+    ? buildToolListingForPrompt(toolRegistry.tools, groupMap)
+    : ""
 
   // Build memory section
   const memorySection = buildMemorySection({ isMinimal, availableTools })
@@ -314,13 +290,10 @@ export function buildAgentSystemPrompt(params: SystemPromptOptions): string {
     lines.push("")
   }
 
-  // Tooling section
-  if (toolLines.length > 0) {
-    lines.push("## Tooling")
-    lines.push(`${toolLines.length} tools available (filtered by policy). Tool names are case-sensitive.`)
-    lines.push(toolLines.join("\n"))
-    if (toolLines.length > 15) {
-      lines.push("")
+  // Tooling section (dynamic, description-aware — OpenClaw pattern)
+  if (toolListingSection) {
+    lines.push(toolListingSection)
+    if (toolNames.length > 15) {
       lines.push("Note: You have many tools available. Focus on the ones most relevant to the user's request. Use request_tools to load additional groups if needed.")
     }
     lines.push("If a task is more complex or takes longer, consider breaking it into smaller steps.")

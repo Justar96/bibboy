@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "fallback": {
+    "emoji": "🧩",
+    "detailKeys": ["command", "path", "url", "query", "name", "id"]
+  },
+  "tools": {
+    "web_search": {
+      "emoji": "🔎",
+      "title": "Web Search",
+      "detailKeys": ["query", "count"]
+    },
+    "web_fetch": {
+      "emoji": "📄",
+      "title": "Web Fetch",
+      "detailKeys": ["url", "extractMode"]
+    },
+    "memory_search": {
+      "emoji": "🧠",
+      "title": "Memory Search",
+      "detailKeys": ["query"]
+    },
+    "memory_get": {
+      "emoji": "📓",
+      "title": "Memory Get",
+      "detailKeys": ["path", "lines"]
+    },
+    "read_file": {
+      "emoji": "📖",
+      "title": "Read File",
+      "detailKeys": ["path"]
+    },
+    "write_file": {
+      "emoji": "✍️",
+      "title": "Write File",
+      "detailKeys": ["path"]
+    },
+    "list_files": {
+      "emoji": "📂",
+      "title": "List Files",
+      "detailKeys": []
+    },
+    "reset_workspace": {
+      "emoji": "🔄",
+      "title": "Reset Workspace",
+      "detailKeys": []
+    },
+    "set_character_pose": {
+      "emoji": "🎭",
+      "title": "Set Pose",
+      "detailKeys": ["pose"]
+    },
+    "task_suggest": {
+      "emoji": "💡",
+      "title": "Suggest",
+      "detailKeys": ["suggestions"]
+    },
+    "soul_observe_trait": {
+      "emoji": "👁️",
+      "title": "Observe Trait",
+      "detailKeys": ["trait", "strength"]
+    },
+    "soul_get_state": {
+      "emoji": "✨",
+      "title": "Soul State",
+      "detailKeys": []
+    },
+    "canvas_get_state": {
+      "emoji": "🖼️",
+      "title": "Canvas State",
+      "detailKeys": []
+    },
+    "canvas_set_layer_variant": {
+      "emoji": "🎨",
+      "title": "Set Variant",
+      "detailKeys": ["layer", "variant"]
+    },
+    "canvas_set_layer_color": {
+      "emoji": "🎨",
+      "title": "Set Color",
+      "detailKeys": ["layer", "color"]
+    },
+    "canvas_set_palette": {
+      "emoji": "🎨",
+      "title": "Set Palette",
+      "detailKeys": ["palette"]
+    },
+    "canvas_set_pose": {
+      "emoji": "🎭",
+      "title": "Canvas Pose",
+      "detailKeys": ["pose"]
+    },
+    "canvas_set_animation": {
+      "emoji": "🎬",
+      "title": "Animate",
+      "detailKeys": ["animation"]
+    },
+    "canvas_reset_character": {
+      "emoji": "🔄",
+      "title": "Reset Character",
+      "detailKeys": []
+    },
+    "canvas_undo": {
+      "emoji": "↩️",
+      "title": "Undo",
+      "detailKeys": []
+    },
+    "canvas_export_blueprint": {
+      "emoji": "📋",
+      "title": "Export Blueprint",
+      "detailKeys": []
+    },
+    "request_tools": {
+      "emoji": "🔧",
+      "title": "Request Tools",
+      "detailKeys": ["groups"]
+    }
+  }
+}

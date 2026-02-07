@@ -1,8 +1,8 @@
-import { useState, memo } from "react"
-import { ChevronIcon } from "@/components/Chat/icons"
-import type { LeftSidebarData } from "./LeftSidebar"
-import { ActivitySection } from "./ActivitySection"
-import { TaskSection } from "./TaskSection"
+import { useState, memo } from "react";
+import { ChevronIcon } from "@/components/Chat/icons";
+import type { LeftSidebarData } from "./LeftSidebar";
+import { ActivitySection } from "./ActivitySection";
+import { TaskSection } from "./TaskSection";
 
 // ============================================================================
 // Main Component
@@ -11,16 +11,16 @@ import { TaskSection } from "./TaskSection"
 export const MobileActivityPanel = memo(function MobileActivityPanel({
   data,
 }: {
-  data: LeftSidebarData | null
+  data: LeftSidebarData | null;
 }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(false);
 
-  if (!data) return null
+  if (!data) return null;
 
   const runningCount = data.activityGroups.reduce(
     (n, g) => n + g.actions.filter((a) => a.status === "running").length,
     0,
-  )
+  );
 
   return (
     <div className="lg:hidden border-b border-[#EBEBEB] bg-white">
@@ -52,21 +52,27 @@ export const MobileActivityPanel = memo(function MobileActivityPanel({
       {/* Expanded content */}
       <div
         className={`overflow-hidden transition-[max-height] duration-200 ease-in-out ${
-          expanded ? "max-h-[600px]" : "max-h-0"
+          expanded ? "max-h-[76vh]" : "max-h-0"
         }`}
       >
-        <div className="border-t border-[#F0F0F0]">
-          <ActivitySection groups={data.activityGroups} />
-          <TaskSection
-            tasks={data.tasks}
-            pendingCount={data.pendingCount}
-            onUpdateStatus={data.onUpdateStatus}
-            onAccept={data.onAcceptTask}
-            onDismiss={data.onDismissTask}
-            onDelete={data.onDeleteTask}
-          />
+        <div className="border-t border-[#F0F0F0] h-[min(72vh,560px)] flex flex-col">
+          <div className="flex-1 min-h-0 overflow-y-auto sidebar-scroll">
+            <ActivitySection groups={data.activityGroups} listMaxHeightClass="max-h-none" />
+          </div>
+          <div className="shrink-0 h-56 border-t border-[#EBEBEB] overflow-y-auto sidebar-scroll">
+            <TaskSection
+              tasks={data.tasks}
+              pendingCount={data.pendingCount}
+              onAddTask={data.onAddTask}
+              onUpdateStatus={data.onUpdateStatus}
+              onAccept={data.onAcceptTask}
+              onDismiss={data.onDismissTask}
+              onDelete={data.onDeleteTask}
+              listMaxHeightClass="max-h-none"
+            />
+          </div>
         </div>
       </div>
     </div>
-  )
-})
+  );
+});
