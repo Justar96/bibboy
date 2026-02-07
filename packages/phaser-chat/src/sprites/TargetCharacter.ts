@@ -1,4 +1,4 @@
-import Phaser from "phaser"
+import * as Phaser from "phaser"
 import type { CanvasAnimationId, CanvasCharacterBlueprint, CanvasPoseId } from "@bibboy/shared"
 import { createDefaultCanvasBlueprint } from "@bibboy/shared"
 

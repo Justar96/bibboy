@@ -9,6 +9,7 @@ import {
   type SidebarMode,
   type ChatDataContextValue,
 } from "@/components/RightSidebar"
+import { LeftSidebar, MobileActivityPanel, type LeftSidebarData } from "@/components/LeftSidebar"
 
 // ============================================================================
 // Types
@@ -19,6 +20,7 @@ interface LayoutContext {
   readonly setNavContent: (content: ReactNode) => void
   readonly setSidebarMode: (mode: SidebarMode) => void
   readonly setChatData: (data: ChatDataContextValue) => void
+  readonly setLeftSidebarData: (data: LeftSidebarData | null) => void
 }
 
 // ============================================================================
@@ -55,6 +57,7 @@ export function MainLayout() {
     isTyping: false,
     streamingContent: "",
   })
+  const [leftSidebarData, setLeftSidebarData] = useState<LeftSidebarData | null>(null)
 
   // Track scroll progress for the progress indicator
   useEffect(() => {
@@ -76,8 +79,8 @@ export function MainLayout() {
 
   // Stable context value to avoid unnecessary re-renders
   const contextValue = useMemo<LayoutContext>(
-    () => ({ setNavContent, setSidebarMode, setChatData }),
-    [setNavContent, setSidebarMode, setChatData]
+    () => ({ setNavContent, setSidebarMode, setChatData, setLeftSidebarData }),
+    [setNavContent, setSidebarMode, setChatData, setLeftSidebarData]
   )
 
   // Memoize percentage display
@@ -94,43 +97,9 @@ export function MainLayout() {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
-      {/* Left Column - Fixed Navigation Sidebar */}
+      {/* Left Column - Fixed Sidebar with Activity Log + Tasks */}
       <aside className="hidden lg:flex fixed left-0 top-0 w-[360px] h-screen bg-white border-r border-[#EBEBEB] z-40 flex-col">
-        <div className="flex-1 pl-12 pr-10 py-12">
-          {/* Brand */}
-          <PrefetchLink to="/" className="block mb-12">
-            <span className="font-mono text-[12px] font-semibold text-[#0066CC] uppercase tracking-[0.1em]">
-              {personalInfo.name}
-            </span>
-          </PrefetchLink>
-
-          {/* Hero Section */}
-          <header className="mb-10 pb-8 border-b border-[#EBEBEB]">
-            <h1 className="font-serif text-[17px] text-[#1A1A1A] tracking-[-0.01em] leading-[1.3] mb-3">
-              Software Developer
-            </h1>
-            <p className="text-[13px] text-[#666666] leading-[1.6]">
-              {personalInfo.tagline}
-            </p>
-          </header>
-
-          {/* Connect */}
-          <nav className="flex items-center gap-1">
-            {socialLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.url}
-                target={link.isExternal ? "_blank" : undefined}
-                rel={link.isExternal ? "noopener noreferrer" : undefined}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-mono text-[#888888] hover:text-[#1A1A1A] hover:bg-[#F5F5F5] rounded-sm transition-colors"
-                title={link.name}
-              >
-                <link.icon className="w-3.5 h-3.5" />
-                <span>{link.name}</span>
-              </a>
-            ))}
-          </nav>
-        </div>
+        <LeftSidebar data={leftSidebarData} />
       </aside>
 
       {/* Right Column - Fixed Sidebar (constant width to prevent layout shift) */}
@@ -218,9 +187,14 @@ export function MainLayout() {
         </div>
       )}
 
+      {/* Mobile Activity Panel - collapsible above content */}
+      <div className={`lg:hidden ${navContent ? "pt-[7.5rem]" : "pt-14"}`}>
+        <MobileActivityPanel data={leftSidebarData} />
+      </div>
+
       <main
         className={`lg:ml-[360px] xl:mr-[280px] px-4 lg:px-6 pb-6 ${
-          navContent ? "pt-[7.5rem] lg:pt-[68px]" : "pt-14 lg:pt-6"
+          navContent ? "lg:pt-[68px]" : "lg:pt-6"
         }`}
       >
         <div className="max-w-[760px] mx-auto">

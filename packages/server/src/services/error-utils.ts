@@ -1,9 +1,41 @@
+import { Schema } from "effect"
+
+const UnknownRecordSchema = Schema.Record({
+  key: Schema.String,
+  value: Schema.Unknown,
+})
+
+const decodeUnknownRecord = Schema.decodeUnknownEither(UnknownRecordSchema)
+
+function toRecord(error: unknown): Record<string, unknown> | null {
+  const decoded = decodeUnknownRecord(error)
+  return decoded._tag === "Right" ? decoded.right : null
+}
+
+function getStringProp(
+  record: Record<string, unknown>,
+  key: string
+): string | undefined {
+  const value = record[key]
+  return typeof value === "string" ? value : undefined
+}
+
+function getFiniteNumberProp(
+  record: Record<string, unknown>,
+  key: string
+): number | undefined {
+  const value = record[key]
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined
+}
+
 /** Extract the _tag from an Effect tagged error, or "unknown" */
 export function extractErrorTag(error: unknown): string {
-  if (error != null && typeof error === "object" && "_tag" in error) {
-    return String((error as Record<string, unknown>)["_tag"])
+  const record = toRecord(error)
+  if (!record) {
+    return "unknown"
   }
-  return "unknown"
+
+  return getStringProp(record, "_tag") ?? "unknown"
 }
 
 /**
@@ -15,50 +47,52 @@ export function extractErrorTag(error: unknown): string {
 export function extractAgentErrorMessage(error: unknown): string {
   if (error == null) return "Unknown error"
 
-  // Fall back to standard Error message early for non-objects
-  if (typeof error !== "object") {
-    if (error instanceof Error && error.message !== "An error has occurred") {
-      return error.message
-    }
+  if (error instanceof Error && error.message !== "An error has occurred") {
+    return error.message
+  }
+
+  const record = toRecord(error)
+  if (!record) {
     const str = String(error)
     return str === "[object Object]" ? "Unknown error" : str
   }
 
-  // Safe property accessor for tagged error fields
-  const record = error as Record<string, unknown>
-  const prop = (key: string): unknown => record[key]
-  const tag = typeof prop("_tag") === "string" ? (prop("_tag") as string) : undefined
+  const tag = getStringProp(record, "_tag")
 
   if (tag) {
     switch (tag) {
       case "AgentError":
-        return typeof prop("reason") === "string" ? prop("reason") as string : "Agent error"
+        return getStringProp(record, "reason") ?? "Agent error"
       case "ToolError":
-        return `Tool '${prop("toolName")}' failed: ${prop("reason")}`
+        return `Tool '${getStringProp(record, "toolName") ?? "unknown"}' failed: ${getStringProp(record, "reason") ?? "unknown error"}`
       case "ApiKeyNotConfiguredError":
-        return `API key not configured for provider: ${prop("provider")}`
-      case "RateLimitExceededError":
-        return `Rate limit exceeded${prop("retryAfterMs") ? ` (retry after ${prop("retryAfterMs")}ms)` : ""}`
-      case "ContextOverflowError":
-        return `Context overflow for model ${prop("model")}${prop("tokensUsed") ? ` (${prop("tokensUsed")} tokens)` : ""}`
+        return `API key not configured for provider: ${getStringProp(record, "provider") ?? "unknown"}`
+      case "RateLimitExceededError": {
+        const retryAfterMs = getFiniteNumberProp(record, "retryAfterMs")
+        return `Rate limit exceeded${retryAfterMs ? ` (retry after ${retryAfterMs}ms)` : ""}`
+      }
+      case "ContextOverflowError": {
+        const model = getStringProp(record, "model") ?? "unknown"
+        const tokensUsed = getFiniteNumberProp(record, "tokensUsed")
+        return `Context overflow for model ${model}${tokensUsed ? ` (${tokensUsed} tokens)` : ""}`
+      }
       case "ApiTimeoutError":
-        return `API request timed out after ${prop("timeoutMs")}ms`
-      case "ServiceOverloadedError":
-        return `Service overloaded${prop("retryAfterMs") ? ` (retry after ${prop("retryAfterMs")}ms)` : ""}`
+        return `API request timed out after ${getFiniteNumberProp(record, "timeoutMs") ?? "unknown"}ms`
+      case "ServiceOverloadedError": {
+        const retryAfterMs = getFiniteNumberProp(record, "retryAfterMs")
+        return `Service overloaded${retryAfterMs ? ` (retry after ${retryAfterMs}ms)` : ""}`
+      }
       case "AuthenticationError":
-        return `Authentication failed: ${prop("reason")}`
+        return `Authentication failed: ${getStringProp(record, "reason") ?? "unknown"}`
       case "BillingError":
-        return `Billing error: ${prop("reason")}`
+        return `Billing error: ${getStringProp(record, "reason") ?? "unknown"}`
       case "NoResponseError":
         return "No response received from API"
-      default:
-        if (typeof prop("reason") === "string") return prop("reason") as string
+      default: {
+        const reason = getStringProp(record, "reason")
+        if (reason) return reason
+      }
     }
-  }
-
-  // Fall back to standard Error message
-  if (error instanceof Error && error.message !== "An error has occurred") {
-    return error.message
   }
 
   // Last resort

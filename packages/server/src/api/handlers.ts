@@ -10,8 +10,11 @@ import {
   ValidationError,
   FileNotFoundError,
   RateLimitError,
-  type ChatMessage,
 } from "@bibboy/shared"
+import {
+  extractSuggestionPayloadFromGemini,
+  parseSuggestionsArray,
+} from "./suggestions-helpers"
 
 // ============================================================================
 // API Handlers Implementation
@@ -67,7 +70,7 @@ export const apiGroupLive = HttpApiBuilder.group(api, "api", (handlers) =>
             // Load SOUL.md for context
             await initializeWorkspace("default")
             const soulFile = await readWorkspaceFile("default", "SOUL.md")
-            const soulContent = typeof soulFile === "string" ? "" : soulFile?.content || ""
+            const soulContent = soulFile?.content ?? ""
 
             const response = await fetch(
               `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
@@ -102,21 +105,16 @@ Generate 3 unique conversation starters.`,
               throw new Error("Gemini API error")
             }
 
-            const data = (await response.json()) as {
-              candidates?: Array<{
-                content?: { parts?: Array<{ text?: string }> }
-              }>
+            const data: unknown = await response.json()
+            const content = extractSuggestionPayloadFromGemini(data)
+            if (!content) {
+              throw new Error("Unexpected Gemini suggestion response shape")
             }
-            const content =
-              data.candidates?.[0]?.content?.parts
-                ?.map((p) => p.text ?? "")
-                .filter(Boolean)
-                .join("") || "[]"
 
-            // Parse JSON array from response
-            const parsed = JSON.parse(
-              content.replace(/```json?\n?|\n?```/g, "").trim()
-            ) as string[]
+            const parsed = parseSuggestionsArray(content)
+            if (!parsed) {
+              throw new Error("Unexpected Gemini suggestion payload")
+            }
 
             return { suggestions: parsed.slice(0, 3) }
           },
@@ -173,7 +171,7 @@ Generate 3 unique conversation starters.`,
         const result = yield* agentService.run({
           message,
           agentId,
-          history: history as ChatMessage[] | undefined,
+          history,
           enableTools,
         }).pipe(
           // Convert agent service errors to API errors

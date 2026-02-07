@@ -1,5 +1,5 @@
 import type { AgentPose, ChatMessage } from "@bibboy/shared"
-import type { AgentTool, ToolRegistry } from "./types"
+import type { AgentTool, ToolRegistry, ToolGroupName, ToolGroupInfo, ToolExecutionContext } from "./types"
 import { createWebSearchTool } from "./web-search"
 import { createWebFetchTool } from "./web-fetch"
 import { createMemorySearchTool, createMemoryGetTool } from "./memory-search"
@@ -11,61 +11,34 @@ import {
 } from "./canvas-tools"
 import { createSoulTools } from "./soul-tools"
 import type { SoulToolRuntime } from "../services/SoulStateService"
-import type { ResolvedAgentConfig, ToolProfile } from "../agents/AgentConfig"
+import type { ResolvedAgentConfig } from "../agents/AgentConfig"
+import {
+  TOOL_GROUPS,
+  resolveEffectivePolicy,
+} from "./tool-policy"
 
 // ============================================================================
-// Tool Profiles (matching reference implementation)
+// Tool Group Descriptions (for request_tools meta-tool)
 // ============================================================================
 
-const TOOL_PROFILES: Record<ToolProfile, string[]> = {
-  minimal: ["memory_search", "memory_get"],
-  coding: ["memory_search", "memory_get", "read_file", "write_file", "list_files", "web_search", "web_fetch"],
-  messaging: [
-    "memory_search",
-    "memory_get",
-    "web_search",
-    "web_fetch",
-    "set_character_pose",
-    "canvas_get_state",
-    "canvas_set_layer_variant",
-    "canvas_set_layer_color",
-    "canvas_set_palette",
-    "canvas_set_pose",
-    "canvas_set_animation",
-    "canvas_reset_character",
-    "canvas_undo",
-    "canvas_export_blueprint",
-    "soul_observe_trait",
-    "soul_get_state",
-  ],
-  full: [], // Empty means all tools allowed
+const TOOL_GROUP_DESCRIPTIONS: Record<ToolGroupName, string> = {
+  core: "Memory search, task suggestions, and character pose",
+  web: "Web search and URL content fetching",
+  canvas: "Pixel character builder — layers, colors, poses, animations",
+  soul: "Soul evolution trait observation and state",
+  workspace: "File read/write/list for workspace context",
 }
 
-/**
- * Resolve effective allow list from profile and explicit settings.
- */
-function resolveEffectiveAllowList(tools: ResolvedAgentConfig["tools"]): string[] {
-  const profile = tools.profile
-  const explicitAllow = tools.allow
-  const alsoAllow = tools.alsoAllow
+const TOOL_GROUP_NAMES: Record<ToolGroupName, string[]> = {
+  core: TOOL_GROUPS["group:core"],
+  web: TOOL_GROUPS["group:web"],
+  canvas: TOOL_GROUPS["group:canvas"],
+  soul: TOOL_GROUPS["group:soul"],
+  workspace: TOOL_GROUPS["group:workspace"],
+}
 
-  // If explicit allow list is set, use it (profile ignored)
-  if (explicitAllow.length > 0) {
-    return [...explicitAllow, ...alsoAllow]
-  }
-
-  // If profile is set, use profile's tools + alsoAllow
-  if (profile && TOOL_PROFILES[profile]) {
-    const profileTools = TOOL_PROFILES[profile]
-    // Empty profile means all tools (full)
-    if (profileTools.length === 0) {
-      return [...alsoAllow] // Will be interpreted as "all" when empty
-    }
-    return [...profileTools, ...alsoAllow]
-  }
-
-  // No profile, no explicit allow - return alsoAllow (will be "all" if empty)
-  return [...alsoAllow]
+function isToolGroupName(value: string): value is ToolGroupName {
+  return value in TOOL_GROUP_NAMES
 }
 
 // ============================================================================
@@ -73,7 +46,47 @@ function resolveEffectiveAllowList(tools: ResolvedAgentConfig["tools"]): string[
 // ============================================================================
 
 /**
+ * Create tools for a specific group on demand (for request_tools dynamic loading).
+ */
+function createGroupTools(
+  group: ToolGroupName,
+  config: ResolvedAgentConfig,
+  getSessionMessages: () => ChatMessage[],
+  sendPoseChange?: (pose: AgentPose) => void,
+  canvasRuntime?: CanvasToolRuntime,
+  soulRuntime?: SoulToolRuntime
+): AgentTool[] {
+  switch (group) {
+    case "core": {
+      const coreParts: AgentTool[] = []
+      if (config.memorySearch.enabled) {
+        coreParts.push(createMemorySearchTool(config, getSessionMessages))
+        coreParts.push(createMemoryGetTool(config, getSessionMessages))
+      }
+      if (sendPoseChange) {
+        coreParts.push(createSetCharacterPoseTool(sendPoseChange))
+      }
+      return coreParts
+    }
+    case "web": {
+      const webParts: AgentTool[] = []
+      const ws = createWebSearchTool()
+      if (ws) webParts.push(ws)
+      webParts.push(createWebFetchTool())
+      return webParts
+    }
+    case "canvas":
+      return canvasRuntime ? createCanvasTools(canvasRuntime) : []
+    case "soul":
+      return soulRuntime ? createSoulTools(soulRuntime) : []
+    case "workspace":
+      return createWorkspaceTools(config.id)
+  }
+}
+
+/**
  * Create a tool registry with all available tools.
+ * Uses compiled policy matching (deny-first) for efficient tool filtering.
  */
 export function createToolRegistry(
   agentConfig: ResolvedAgentConfig,
@@ -83,20 +96,14 @@ export function createToolRegistry(
   soulRuntime?: SoulToolRuntime
 ): ToolRegistry {
   const tools: AgentTool[] = []
-  const effectiveAllowList = resolveEffectiveAllowList(agentConfig.tools)
-  const denyList = agentConfig.tools.deny
 
-  const shouldInclude = (name: string): boolean => {
-    // If deny list has this tool, exclude it
-    if (denyList.length > 0 && denyList.includes(name)) {
-      return false
-    }
-    // If effective allow list is empty, include all; otherwise check if in allow list
-    if (effectiveAllowList.length === 0) {
-      return true
-    }
-    return effectiveAllowList.includes(name)
-  }
+  // Use compiled policy matcher (deny-first evaluation)
+  const shouldInclude = resolveEffectivePolicy({
+    profile: agentConfig.tools.profile,
+    allow: agentConfig.tools.allow,
+    alsoAllow: agentConfig.tools.alsoAllow,
+    deny: agentConfig.tools.deny,
+  })
 
   // Add web search tool (if API key available)
   const webSearch = createWebSearchTool()
@@ -152,21 +159,160 @@ export function createToolRegistry(
     }
   }
 
+  const loadedGroups = new Set<ToolGroupName>()
+
+  // Determine which groups are loaded based on included tools
+  for (const [group, names] of Object.entries(TOOL_GROUP_NAMES) as [ToolGroupName, string[]][]) {
+    if (names.some((n) => tools.some((t) => t.name === n))) {
+      loadedGroups.add(group)
+    }
+  }
+
+  // Add request_tools meta-tool (lets the agent load additional tool groups mid-conversation)
+  if (shouldInclude("request_tools")) {
+    tools.push({
+      label: "Request Tools",
+      name: "request_tools",
+      description:
+        "Load additional tool groups into this conversation. " +
+        "Call this when you need capabilities not currently available. " +
+        "Available groups: " +
+        (Object.keys(TOOL_GROUP_NAMES) as ToolGroupName[])
+          .map((g) => `${g} (${TOOL_GROUP_DESCRIPTIONS[g]})`)
+          .join("; "),
+      parameters: {
+        type: "object",
+        properties: {
+          groups: {
+            type: "string",
+            description:
+              "Comma-separated group names to load. Available: " +
+              Object.keys(TOOL_GROUP_NAMES).join(", "),
+          },
+        },
+        required: ["groups"],
+      },
+      execute: async (_toolCallId, args) => {
+        const groupsStr = typeof args.groups === "string" ? args.groups : ""
+        const requested = groupsStr
+          .split(",")
+          .map((g) => g.trim())
+          .filter((g) => g.length > 0)
+        const newlyLoaded: ToolGroupName[] = []
+        const alreadyLoaded: ToolGroupName[] = []
+        const invalidGroups: string[] = []
+
+        for (const group of requested) {
+          if (!isToolGroupName(group)) {
+            invalidGroups.push(group)
+            continue
+          }
+          if (loadedGroups.has(group)) continue
+
+          // Actually instantiate tools for the requested group
+          const newTools = createGroupTools(group, agentConfig, getSessionMessages, sendPoseChange, canvasRuntime, soulRuntime)
+          const addedNames: string[] = []
+          for (const tool of newTools) {
+            if (!tools.some((t) => t.name === tool.name)) {
+              tools.push(tool)
+              addedNames.push(tool.name)
+            }
+          }
+
+          loadedGroups.add(group)
+          newlyLoaded.push(group)
+        }
+
+        for (const group of requested) {
+          if (!isToolGroupName(group)) continue
+          if (!newlyLoaded.includes(group) && loadedGroups.has(group)) {
+            alreadyLoaded.push(group)
+          }
+        }
+
+        const uniqueAlreadyLoaded = Array.from(new Set(alreadyLoaded))
+        const uniqueInvalid = Array.from(new Set(invalidGroups))
+
+        let hint =
+          newlyLoaded.length > 0
+            ? `Groups loaded: ${newlyLoaded.join(", ")}. The tools from these groups are now available in your next tool call.`
+            : "All requested groups were already loaded."
+
+        if (uniqueInvalid.length > 0) {
+          hint += ` Ignored invalid groups: ${uniqueInvalid.join(", ")}.`
+        }
+
+        return {
+          toolCallId: _toolCallId,
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              loaded: newlyLoaded,
+              alreadyLoaded: uniqueAlreadyLoaded,
+              invalidGroups: uniqueInvalid,
+              hint,
+            }),
+          }],
+        }
+      },
+    })
+  }
+
   return {
     tools,
     get: (name: string) => tools.find((t) => t.name === name),
-    getDefinitions: () => tools.map((tool) => ({
-      type: "function" as const,
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.parameters,
-    })),
+    getDefinitions: () =>
+      tools.map((tool) => ({
+        type: "function" as const,
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters,
+      })),
+    addTools: (newTools: AgentTool[]) => {
+      for (const tool of newTools) {
+        if (!tools.some((t) => t.name === tool.name)) {
+          tools.push(tool)
+        }
+      }
+    },
+    getGroups: (): ToolGroupInfo[] =>
+      (Object.keys(TOOL_GROUP_NAMES) as ToolGroupName[]).map((name) => ({
+        name,
+        description: TOOL_GROUP_DESCRIPTIONS[name],
+        toolNames: TOOL_GROUP_NAMES[name],
+        loaded: loadedGroups.has(name),
+      })),
+    markGroupLoaded: (group: ToolGroupName) => {
+      loadedGroups.add(group)
+    },
+    isGroupLoaded: (group: ToolGroupName) => loadedGroups.has(group),
+    getToolSummary: (): string => {
+      if (tools.length === 0) return "No tools available."
+      const grouped: Record<string, string[]> = {}
+      for (const tool of tools) {
+        // Find which group this tool belongs to
+        let groupLabel = "other"
+        for (const [gName, gTools] of Object.entries(TOOL_GROUP_NAMES)) {
+          if (gTools.includes(tool.name)) {
+            groupLabel = gName
+            break
+          }
+        }
+        if (!grouped[groupLabel]) grouped[groupLabel] = []
+        grouped[groupLabel].push(tool.name)
+      }
+      const lines = [`${tools.length} tools available:`]
+      for (const [group, names] of Object.entries(grouped)) {
+        lines.push(`  ${group}: ${names.join(", ")}`)
+      }
+      return lines.join("\n")
+    },
   }
 }
 
 // Re-exports
-export type { AgentTool, ToolRegistry, FunctionToolDefinition } from "./types"
-export { jsonResult, errorResult, truncateText } from "./types"
+export type { AgentTool, ToolRegistry, FunctionToolDefinition, ToolGroupName, ToolGroupInfo, ToolExecutionContext, ToolExecutionMetrics } from "./types"
+export { jsonResult, errorResult, truncateText, applyToolWrappers, createToolExecutionMetrics } from "./types"
 export { createWebSearchTool } from "./web-search"
 export { createWebFetchTool } from "./web-fetch"
 export { createMemorySearchTool, createMemoryGetTool } from "./memory-search"
@@ -175,3 +321,17 @@ export { createSetCharacterPoseTool } from "./set-character-pose"
 export { createCanvasTools, type CanvasToolRuntime } from "./canvas-tools"
 export { createSoulTools } from "./soul-tools"
 export { compactToolResult, resetResultCounter } from "./tool-result-store"
+export {
+  TOOL_GROUPS,
+  TOOL_PROFILES,
+  compilePattern,
+  compilePatterns,
+  matchesAny,
+  makeToolPolicyMatcher,
+  expandToolGroups,
+  resolveProfileAllowList,
+  resolveEffectivePolicy,
+  filterToolsByPolicy,
+  type CompiledPattern,
+  type ToolPolicy,
+} from "./tool-policy"

@@ -16,6 +16,23 @@ export const ThinkingLevelSchema = Schema.Union(
 
 export type ThinkingLevel = Schema.Schema.Type<typeof ThinkingLevelSchema>
 
+/**
+ * Map thinking level to Gemini thinking budget tokens.
+ * Enables agents to use extended thinking without manual token config.
+ */
+export const THINKING_BUDGET_MAP: Record<ThinkingLevel, number | undefined> = {
+  off: undefined,
+  minimal: 1024,
+  low: 4096,
+  medium: 8192,
+  high: 16384,
+  xhigh: 32768,
+}
+
+export function getThinkingBudget(level: ThinkingLevel): number | undefined {
+  return THINKING_BUDGET_MAP[level]
+}
+
 // ============================================================================
 // Time Format Configuration
 // ============================================================================

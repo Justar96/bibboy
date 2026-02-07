@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, memo, lazy, Suspense } from "react"
+import { useState, useCallback, useRef, useEffect, useMemo, memo, lazy, Suspense } from "react"
 import type { ChatMessage as ChatMessageType } from "@bibboy/shared"
 import { ChatThread, ChatInput, ToolOutputSidebar } from "@/components/Chat"
 import type { SidebarContent, ChatQueueItem } from "@/components/Chat"
@@ -6,7 +6,10 @@ import { useChatMemory } from "@/hooks/useChatMemory"
 import { useAgentChat } from "@/hooks/useAgentChat"
 import { useWebSocketChat, type ToolExecution } from "@/hooks/useWebSocketChat"
 import { usePromptSuggestions } from "@/hooks/usePromptSuggestions"
+import { useActivityLog } from "@/hooks/useActivityLog"
+import { useTaskList } from "@/hooks/useTaskList"
 import { useLayoutNav } from "@/components/MainLayout"
+import type { LeftSidebarData } from "@/components/LeftSidebar"
 import { PrefetchLink } from "@/components/PrefetchLink"
 
 const PhaserBuilderCanvas = lazy(() =>
@@ -148,7 +151,7 @@ export function PlaygroundPage() {
   const { messages: httpMessages, addMessage, clearMessages: clearHttpMessages } =
     useChatMemory()
   const [error, setError] = useState<string | null>(null)
-  const { setNavContent } = useLayoutNav()
+  const { setNavContent, setLeftSidebarData } = useLayoutNav()
 
   // Tool output sidebar state (OpenClaw pattern)
   const [sidebarContent, setSidebarContent] = useState<SidebarContent | null>(null)
@@ -321,6 +324,38 @@ export function PlaygroundPage() {
       httpChat.abort()
     }
   }, [wsChat, httpChat])
+
+  // ------------------------------------------------------------------
+  // Activity Log + Task List → Left Sidebar
+  // ------------------------------------------------------------------
+
+  const activityGroups = useActivityLog({
+    messages,
+    activeTools,
+    isTyping: isStreaming,
+    typingState: USE_WEBSOCKET_CHAT ? wsChat.typingState : null,
+    isCompacting: USE_WEBSOCKET_CHAT ? wsChat.isCompacting : false,
+  })
+
+  const taskList = useTaskList()
+
+  const leftSidebarData = useMemo<LeftSidebarData>(
+    () => ({
+      activityGroups,
+      tasks: taskList.tasks,
+      pendingCount: taskList.pendingCount,
+      onUpdateStatus: taskList.updateStatus,
+      onAcceptTask: taskList.acceptTask,
+      onDismissTask: taskList.dismissTask,
+      onDeleteTask: taskList.deleteTask,
+    }),
+    [activityGroups, taskList],
+  )
+
+  useEffect(() => {
+    setLeftSidebarData(leftSidebarData)
+    return () => setLeftSidebarData(null)
+  }, [leftSidebarData, setLeftSidebarData])
 
   // Flush queue when agent finishes (OpenClaw pattern)
   const prevStreamingRef = useRef(isStreaming)

@@ -96,6 +96,7 @@ const CORE_TOOL_SUMMARIES: Record<string, string> = {
   canvas_reset_character: "Reset the target character to defaults",
   canvas_undo: "Undo last character mutation",
   canvas_export_blueprint: "Export character blueprint JSON",
+  request_tools: "Load additional tool groups mid-conversation when you need capabilities not yet available",
 }
 
 // ============================================================================
@@ -316,9 +317,12 @@ export function buildAgentSystemPrompt(params: SystemPromptOptions): string {
   // Tooling section
   if (toolLines.length > 0) {
     lines.push("## Tooling")
-    lines.push("Tool availability (filtered by policy):")
-    lines.push("Tool names are case-sensitive. Call tools exactly as listed.")
+    lines.push(`${toolLines.length} tools available (filtered by policy). Tool names are case-sensitive.`)
     lines.push(toolLines.join("\n"))
+    if (toolLines.length > 15) {
+      lines.push("")
+      lines.push("Note: You have many tools available. Focus on the ones most relevant to the user's request. Use request_tools to load additional groups if needed.")
+    }
     lines.push("If a task is more complex or takes longer, consider breaking it into smaller steps.")
     lines.push("")
   }

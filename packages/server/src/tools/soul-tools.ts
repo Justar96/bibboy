@@ -1,5 +1,4 @@
 import { PERSONALITY_TRAITS, isPersonalityTrait, getDominantTraits } from "@bibboy/shared"
-import type { PersonalityTrait } from "@bibboy/shared"
 import type { AgentTool } from "./types"
 import { errorResult, jsonResult, readStringParam, readNumberParam } from "./types"
 import type { SoulToolRuntime } from "../services/SoulStateService"
@@ -42,7 +41,7 @@ function observeTraitTool(runtime: SoulToolRuntime): AgentTool {
         )
       }
 
-      const { evolved, state } = runtime.observeTrait(traitValue as PersonalityTrait, strength)
+      const { evolved, state } = runtime.observeTrait(traitValue, strength)
       const dominant = getDominantTraits(state.traits)
 
       return jsonResult({

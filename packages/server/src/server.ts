@@ -208,7 +208,7 @@ export const startServer = () => {
             return wsResponse
           }
           // Upgrade successful - return undefined to let Bun handle it
-          return undefined as unknown as Response
+          return undefined
         }
 
         // Handle normal HTTP requests

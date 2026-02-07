@@ -17,6 +17,16 @@ const MAX_INLINE_RESULT_CHARS = 4_000
 /** Maximum chars for web_fetch content before saving to file */
 const SAVE_THRESHOLD_CHARS = 3_000
 
+/**
+ * Compute adaptive inline limit based on iteration count.
+ * As iterations grow, compact more aggressively to preserve context.
+ */
+function getAdaptiveInlineLimit(iteration: number): number {
+  if (iteration >= 20) return 1_000
+  if (iteration >= 10) return 2_000
+  return MAX_INLINE_RESULT_CHARS
+}
+
 /** Session-scoped counter for unique filenames */
 let resultCounter = 0
 
@@ -52,6 +62,58 @@ interface WebSearchPayload {
   cached?: boolean
   disabled?: boolean
   error?: string
+}
+
+type JsonRecord = Record<string, unknown>
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined
+}
+
+function asNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined
+}
+
+function asBoolean(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined
+}
+
+function parseJsonRecord(raw: string): JsonRecord {
+  const parsed: unknown = JSON.parse(raw)
+  return isRecord(parsed) ? parsed : {}
+}
+
+function parseSearchResultItems(value: unknown): SearchResultItem[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.filter(isRecord).map((item) => ({
+    title: asString(item.title),
+    url: asString(item.url),
+    description: asString(item.description),
+    published: asString(item.published),
+    siteName: asString(item.siteName),
+  }))
+}
+
+function parseWebSearchPayload(raw: string): WebSearchPayload {
+  const record = parseJsonRecord(raw)
+
+  return {
+    query: asString(record.query),
+    provider: asString(record.provider),
+    count: asNumber(record.count),
+    tookMs: asNumber(record.tookMs),
+    results: parseSearchResultItems(record.results),
+    cached: asBoolean(record.cached),
+    disabled: asBoolean(record.disabled),
+    error: asString(record.error),
+  }
 }
 
 /**
@@ -105,6 +167,28 @@ interface WebFetchPayload {
   cached?: boolean
   disabled?: boolean
   error?: string
+}
+
+function parseWebFetchPayload(raw: string): WebFetchPayload {
+  const record = parseJsonRecord(raw)
+
+  return {
+    url: asString(record.url),
+    finalUrl: asString(record.finalUrl),
+    status: asNumber(record.status),
+    contentType: asString(record.contentType),
+    title: asString(record.title),
+    extractMode: asString(record.extractMode),
+    extractor: asString(record.extractor),
+    truncated: asBoolean(record.truncated),
+    length: asNumber(record.length),
+    fetchedAt: asString(record.fetchedAt),
+    tookMs: asNumber(record.tookMs),
+    text: asString(record.text),
+    cached: asBoolean(record.cached),
+    disabled: asBoolean(record.disabled),
+    error: asString(record.error),
+  }
 }
 
 /**
@@ -197,30 +281,32 @@ async function compactFetchResult(
 export async function compactToolResult(
   toolName: string,
   rawResultText: string,
-  agentId: string
+  agentId: string,
+  iteration: number = 0
 ): Promise<string> {
+  const inlineLimit = getAdaptiveInlineLimit(iteration)
   try {
     if (toolName === "web_search") {
-      const payload = JSON.parse(rawResultText) as WebSearchPayload
+      const payload = parseWebSearchPayload(rawResultText)
       return compactSearchResult(payload)
     }
 
     if (toolName === "web_fetch") {
-      const payload = JSON.parse(rawResultText) as WebFetchPayload
+      const payload = parseWebFetchPayload(rawResultText)
       const { summary } = await compactFetchResult(payload, agentId)
       return summary
     }
 
-    // For all other tools: truncate if too large
-    if (rawResultText.length > MAX_INLINE_RESULT_CHARS) {
-      return rawResultText.slice(0, MAX_INLINE_RESULT_CHARS) + "\n[...truncated]"
+    // For all other tools: truncate if too large (adaptive limit)
+    if (rawResultText.length > inlineLimit) {
+      return rawResultText.slice(0, inlineLimit) + "\n[...truncated]"
     }
 
     return rawResultText
   } catch {
     // If parsing fails, just truncate
-    if (rawResultText.length > MAX_INLINE_RESULT_CHARS) {
-      return rawResultText.slice(0, MAX_INLINE_RESULT_CHARS) + "\n[...truncated]"
+    if (rawResultText.length > inlineLimit) {
+      return rawResultText.slice(0, inlineLimit) + "\n[...truncated]"
     }
     return rawResultText
   }

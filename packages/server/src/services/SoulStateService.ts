@@ -12,7 +12,6 @@ import {
   getNextStage,
   getDominantTraits,
   createDefaultCanvasBlueprint,
-  PERSONALITY_TRAITS,
 } from "@bibboy/shared"
 import type { CanvasToolRuntime } from "../tools/canvas-tools"
 

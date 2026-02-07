@@ -13,6 +13,17 @@ export type ResponseStreamPayload = ResponseStreamEvent | ServerNotification
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
 
 type Emit = (event: ResponseStreamPayload) => void
+type UnsequencedResponsePayload = DistributiveOmit<ResponseStreamPayload, "sequence_number">
+
+function withSequenceNumber(
+  event: UnsequencedResponsePayload,
+  sequenceNumber: number
+): ResponseStreamPayload {
+  return {
+    ...event,
+    sequence_number: sequenceNumber,
+  }
+}
 
 const createEmptyUsage = (): ResponseUsage => ({
   input_tokens: 0,
@@ -31,7 +42,7 @@ function createResponseResource(params: {
   createdAt?: number
 }): ResponseResource {
   return {
-    ...(params.extras ?? {}),
+    ...params.extras,
     id: params.id,
     object: "response",
     created_at: params.createdAt ?? Math.floor(Date.now() / 1000),
@@ -112,9 +123,9 @@ export function createResponsesStreamEmitter(params: {
   const responseExtras = params.responseExtras ?? {}
   const createdAt = Math.floor(Date.now() / 1000)
 
-  const emitWithSeq = (event: DistributiveOmit<ResponseStreamPayload, "sequence_number">) => {
+  const emitWithSeq = (event: UnsequencedResponsePayload) => {
     sequence += 1
-    params.emit({ ...event, sequence_number: sequence } as ResponseStreamPayload)
+    params.emit(withSequenceNumber(event, sequence))
   }
 
   const start = () => {

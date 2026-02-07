@@ -1,6 +1,7 @@
 // ============================================================================
 // Input Validation and Sanitization
 // ============================================================================
+import { Schema } from "effect"
 
 // Maximum sizes for input validation
 const MAX_MESSAGE_LENGTH = 10000 // 10KB max message
@@ -14,6 +15,79 @@ type ValidationResult<T> =
   | { success: true; data: T }
   | { success: false; error: string }
 
+const ChatRoleSchema = Schema.Union(
+  Schema.Literal("user"),
+  Schema.Literal("assistant"),
+  Schema.Literal("system")
+)
+type ChatRole = Schema.Schema.Type<typeof ChatRoleSchema>
+
+const UnknownRecordSchema = Schema.Record({
+  key: Schema.String,
+  value: Schema.Unknown,
+})
+
+const decodeUnknownRecord = Schema.decodeUnknownEither(UnknownRecordSchema)
+const decodeUnknownString = Schema.decodeUnknownEither(Schema.String)
+const decodeUnknownBoolean = Schema.decodeUnknownEither(Schema.Boolean)
+const decodeUnknownNumber = Schema.decodeUnknownEither(Schema.Number)
+const decodeUnknownArray = Schema.decodeUnknownEither(Schema.Array(Schema.Unknown))
+const decodeUnknownChatRole = Schema.decodeUnknownEither(ChatRoleSchema)
+
+function toRecord(value: unknown): Record<string, unknown> | null {
+  const decoded = decodeUnknownRecord(value)
+  return decoded._tag === "Right" ? decoded.right : null
+}
+
+function toString(value: unknown): string | null {
+  const decoded = decodeUnknownString(value)
+  return decoded._tag === "Right" ? decoded.right : null
+}
+
+function toBoolean(value: unknown): boolean | null {
+  const decoded = decodeUnknownBoolean(value)
+  return decoded._tag === "Right" ? decoded.right : null
+}
+
+function toNumber(value: unknown): number | null {
+  const decoded = decodeUnknownNumber(value)
+  if (decoded._tag !== "Right" || !Number.isFinite(decoded.right)) {
+    return null
+  }
+  return decoded.right
+}
+
+function toUnknownArray(value: unknown): unknown[] | null {
+  const decoded = decodeUnknownArray(value)
+  return decoded._tag === "Right" ? Array.from(decoded.right) : null
+}
+
+function toChatRole(value: unknown): ChatRole | null {
+  const decoded = decodeUnknownChatRole(value)
+  return decoded._tag === "Right" ? decoded.right : null
+}
+
+function removeDisallowedControlChars(input: string): string {
+  let result = ""
+
+  for (const char of input) {
+    const code = char.codePointAt(0)
+    if (code === undefined) {
+      result += char
+      continue
+    }
+
+    // Keep tab/newline/carriage-return; drop remaining ASCII control chars.
+    if (code <= 0x1F && code !== 0x09 && code !== 0x0A && code !== 0x0D) {
+      continue
+    }
+
+    result += char
+  }
+
+  return result
+}
+
 /**
  * Sanitize a string by removing potentially dangerous characters.
  * Preserves most content but removes null bytes and control characters.
@@ -21,12 +95,8 @@ type ValidationResult<T> =
 export function sanitizeString(input: string): string {
   if (typeof input !== "string") return ""
   
-  // Remove null bytes and most control characters (keep newlines, tabs)
-  return input
-    .replace(/\0/g, "")
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "")
-    .trim()
+  // Remove control characters (including null bytes) while keeping newlines and tabs.
+  return removeDisallowedControlChars(input).trim()
 }
 
 /**
@@ -36,22 +106,21 @@ export function sanitizeString(input: string): string {
 export function validateAgentRequest(body: unknown): ValidationResult<{
   message: string
   agentId?: string
-  history: Array<{ id: string; role: "user" | "assistant" | "system"; content: string; timestamp: number }>
+  history: Array<{ id: string; role: ChatRole; content: string; timestamp: number }>
   enableTools: boolean
 }> {
-  // Check if body is an object
-  if (!body || typeof body !== "object") {
+  const req = toRecord(body)
+  if (!req) {
     return { success: false, error: "Invalid request body" }
   }
 
-  const req = body as Record<string, unknown>
-
   // Validate message
-  if (typeof req.message !== "string") {
+  const rawMessage = toString(req.message)
+  if (rawMessage === null) {
     return { success: false, error: "Message is required and must be a string" }
   }
 
-  const message = sanitizeString(req.message)
+  const message = sanitizeString(rawMessage)
   
   if (message.length === 0) {
     return { success: false, error: "Message cannot be empty" }
@@ -67,10 +136,11 @@ export function validateAgentRequest(body: unknown): ValidationResult<{
   // Validate agentId if provided
   let agentId: string | undefined
   if (req.agentId !== undefined) {
-    if (typeof req.agentId !== "string") {
+    const parsedAgentId = toString(req.agentId)
+    if (parsedAgentId === null) {
       return { success: false, error: "Agent ID must be a string" }
     }
-    agentId = sanitizeString(req.agentId).slice(0, 100)
+    agentId = sanitizeString(parsedAgentId).slice(0, 100)
     // Validate agent ID format (alphanumeric, hyphens, underscores)
     if (agentId && !/^[a-zA-Z0-9_-]+$/.test(agentId)) {
       return { success: false, error: "Invalid agent ID format" }
@@ -78,42 +148,43 @@ export function validateAgentRequest(body: unknown): ValidationResult<{
   }
 
   // Validate history if provided
-  const history: Array<{ id: string; role: "user" | "assistant" | "system"; content: string; timestamp: number }> = []
+  const history: Array<{ id: string; role: ChatRole; content: string; timestamp: number }> = []
   
   if (req.history !== undefined) {
-    if (!Array.isArray(req.history)) {
+    const parsedHistory = toUnknownArray(req.history)
+    if (parsedHistory === null) {
       return { success: false, error: "History must be an array" }
     }
 
-    if (req.history.length > MAX_HISTORY_LENGTH) {
+    if (parsedHistory.length > MAX_HISTORY_LENGTH) {
       return { 
         success: false, 
         error: `History exceeds maximum length of ${MAX_HISTORY_LENGTH} messages` 
       }
     }
 
-    for (let i = 0; i < req.history.length; i++) {
-      const msg = req.history[i]
-      
-      if (!msg || typeof msg !== "object") {
+    for (let i = 0; i < parsedHistory.length; i++) {
+      const histMsg = toRecord(parsedHistory[i])
+      if (!histMsg) {
         return { success: false, error: `Invalid message at history index ${i}` }
       }
 
-      const histMsg = msg as Record<string, unknown>
-
-      if (typeof histMsg.id !== "string") {
+      const rawId = toString(histMsg.id)
+      if (rawId === null) {
         return { success: false, error: `Missing or invalid ID at history index ${i}` }
       }
 
-      if (!["user", "assistant", "system"].includes(histMsg.role as string)) {
+      const parsedRole = toChatRole(histMsg.role)
+      if (parsedRole === null) {
         return { success: false, error: `Invalid role at history index ${i}` }
       }
 
-      if (typeof histMsg.content !== "string") {
+      const rawContent = toString(histMsg.content)
+      if (rawContent === null) {
         return { success: false, error: `Missing or invalid content at history index ${i}` }
       }
 
-      const content = sanitizeString(histMsg.content)
+      const content = sanitizeString(rawContent)
       if (content.length > MAX_HISTORY_CONTENT) {
         return { 
           success: false, 
@@ -121,21 +192,29 @@ export function validateAgentRequest(body: unknown): ValidationResult<{
         }
       }
 
-      if (typeof histMsg.timestamp !== "number" || !Number.isFinite(histMsg.timestamp)) {
+      const parsedTimestamp = toNumber(histMsg.timestamp)
+      if (parsedTimestamp === null) {
         return { success: false, error: `Invalid timestamp at history index ${i}` }
       }
 
       history.push({
-        id: sanitizeString(histMsg.id).slice(0, 100),
-        role: histMsg.role as "user" | "assistant" | "system",
+        id: sanitizeString(rawId).slice(0, 100),
+        role: parsedRole,
         content,
-        timestamp: histMsg.timestamp,
+        timestamp: parsedTimestamp,
       })
     }
   }
 
   // Validate enableTools
-  const enableTools = req.enableTools !== false // Default to true
+  let enableTools = true
+  if (req.enableTools !== undefined) {
+    const parsedEnableTools = toBoolean(req.enableTools)
+    if (parsedEnableTools === null) {
+      return { success: false, error: "enableTools must be a boolean" }
+    }
+    enableTools = parsedEnableTools
+  }
 
   return {
     success: true,

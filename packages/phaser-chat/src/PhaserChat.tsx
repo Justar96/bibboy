@@ -1,8 +1,10 @@
 import { useRef, useEffect, useCallback, useState, type KeyboardEvent } from "react"
-import Phaser from "phaser"
+import * as Phaser from "phaser"
 import { ChatScene } from "./scenes/ChatScene"
 import { chunkText } from "./utils/textChunker"
 import type { ChatAdapter, ConnectionState } from "./types"
+import type { CanvasCharacterBlueprint, CanvasOp, SoulState, SoulStage } from "@bibboy/shared"
+import { createDefaultCanvasBlueprint } from "@bibboy/shared"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -13,9 +15,14 @@ type InputState = "idle" | "composing" | "thinking" | "chunks"
 interface PhaserChatProps {
   readonly chatAdapter: ChatAdapter
   readonly connectionState: ConnectionState
+  readonly canvasBlueprint?: CanvasCharacterBlueprint | null
+  readonly canvasVersion?: number | null
+  readonly lastCanvasOp?: CanvasOp | null
+  readonly soulState?: SoulState | null
+  readonly soulStage?: SoulStage | null
 }
 
-export function PhaserChat({ chatAdapter, connectionState }: PhaserChatProps) {
+export function PhaserChat({ chatAdapter, connectionState, canvasBlueprint, canvasVersion, lastCanvasOp, soulState, soulStage }: PhaserChatProps) {
   const gameContainerRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<Phaser.Game | null>(null)
   const [inputValue, setInputValue] = useState("")
@@ -115,13 +122,39 @@ export function PhaserChat({ chatAdapter, connectionState }: PhaserChatProps) {
     }
   }, [isCompacting, getScene])
 
-  // Bridge: agent-initiated pose change → PixelBoy state
+  // Bridge: agent-initiated pose change → SoulCharacter state
   useEffect(() => {
     if (pendingPoseChange) {
       getScene()?.handlePoseChange(pendingPoseChange)
       clearPoseChange()
     }
   }, [pendingPoseChange, clearPoseChange, getScene])
+
+  // Bridge: canvas blueprint updates → SoulCharacter
+  const lastAppliedVersionRef = useRef<number | null>(null)
+  useEffect(() => {
+    const scene = getScene()
+    if (!scene) return
+    const nextBlueprint = canvasBlueprint ?? createDefaultCanvasBlueprint()
+    const nextVersion = canvasVersion ?? 1
+    if (lastAppliedVersionRef.current === nextVersion) return
+    scene.handleCanvasPatch(lastCanvasOp ?? null, nextBlueprint, nextVersion)
+    lastAppliedVersionRef.current = nextVersion
+  }, [canvasBlueprint, canvasVersion, lastCanvasOp, getScene])
+
+  // Bridge: soul state → SoulCharacter
+  useEffect(() => {
+    if (soulState) {
+      getScene()?.handleSoulStateUpdate(soulState)
+    }
+  }, [soulState, getScene])
+
+  // Bridge: soul stage change → SoulCharacter
+  useEffect(() => {
+    if (soulStage) {
+      getScene()?.handleSoulStageChange(soulStage)
+    }
+  }, [soulStage, getScene])
 
   // Auto-refocus input after response completes or chunks end
   const prevTypingRef = useRef(isTyping)

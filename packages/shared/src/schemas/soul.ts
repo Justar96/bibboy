@@ -1,5 +1,4 @@
 import { Schema } from "effect"
-import type { CanvasCharacterBlueprint } from "./canvas"
 
 // ============================================================================
 // Soul Evolution Stages

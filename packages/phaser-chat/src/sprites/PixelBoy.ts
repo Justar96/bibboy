@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import type { CharacterState } from "@bibboy/shared";
 import { PALETTE, TEXTURE_MAP, type TextureKey } from "./sprite-frames";
 

@@ -13,7 +13,7 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
-    "lint": "eslint src/"
+    "lint": "oxlint src/"
   },
   "dependencies": {
     "@bibboy/shared": "workspace:*",

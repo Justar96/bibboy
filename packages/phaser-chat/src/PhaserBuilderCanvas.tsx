@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react"
-import Phaser from "phaser"
+import * as Phaser from "phaser"
 import type { CanvasCharacterBlueprint, CanvasOp } from "@bibboy/shared"
 import { createDefaultCanvasBlueprint } from "@bibboy/shared"
 import { BuilderScene } from "./scenes/BuilderScene"

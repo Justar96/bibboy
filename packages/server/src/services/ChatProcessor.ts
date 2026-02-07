@@ -6,6 +6,7 @@ import type {
   CanvasStatePatchNotification,
   CharacterState,
   ChatMessage,
+  CompactingNotification,
   PoseChangeNotification,
   SoulStageChangeNotification,
 } from "@bibboy/shared"
@@ -13,11 +14,15 @@ import { SessionNotFoundError } from "@bibboy/shared"
 import { ChatSessionManager } from "./ChatSessionManager"
 import { createAgentServiceLive } from "./AgentService"
 import { createResponsesStreamEmitter, type ResponseStreamPayload } from "./ResponsesStreamEmitter"
+import {
+  cleanupSessionStreamingState,
+  createStreamEventState,
+  handleAgentStreamEvent,
+} from "./chat-processor-stream-handlers"
+import { maybeCompactSessionMessages } from "./chat-processor-compaction"
 import { agentConfig } from "../agents/AgentConfig"
 import { createToolRegistry } from "../tools"
 import { extractAgentErrorMessage, extractErrorTag } from "./error-utils"
-import { sanitizeAssistantOutput } from "../text"
-import { compactIfNeeded, shouldCompact } from "./ConversationMemory"
 import { getGlobalConfig, getGeminiApiKeyValue } from "../config"
 import { CanvasStateService } from "./CanvasStateService"
 import { getOrCreateSoulSession, type SoulStageChangeCallback } from "./SoulStateService"
@@ -138,9 +143,7 @@ export class ChatProcessor extends Effect.Service<ChatProcessor>()(
                 interactionCount: payload.interactionCount,
               },
             }
-            void Effect.runPromise(
-              sendEvent(sessionId, notification as unknown as ResponseStreamPayload).pipe(Effect.ignore)
-            )
+            void Effect.runPromise(sendEvent(sessionId, notification).pipe(Effect.ignore))
           }
           const soulSession = getOrCreateSoulSession(sessionId, canvasRuntime, onSoulStageChange)
           const soulRuntime = soulSession.createRuntime()
@@ -191,81 +194,33 @@ export class ChatProcessor extends Effect.Service<ChatProcessor>()(
           const messages = yield* sessionManager.getMessages(sessionId)
           sessionMessages = [...messages] as ChatMessage[]
 
-          // ── Context compaction ────────────────────────────────────
-          // Estimate system prompt tokens to decide if compaction is needed.
-          // We build a lightweight estimate rather than the full prompt to
-          // avoid the cost of loading workspace files twice.
+          // Context compaction (delegated to helper).
           const appConfig = getGlobalConfig()
           const apiKey = getGeminiApiKeyValue(appConfig) ?? null
 
-          if (apiKey && sessionMessages.length > 0) {
-            // Rough system prompt estimate — actual prompt built later in AgentService
-            const systemPromptEstimate = 2000 // ~2K tokens for system prompt + tools + context
+          const sendCompactionNotification = (
+            params: CompactingNotification["params"]
+          ): Effect.Effect<void, never> =>
+            sendEvent(sessionId, {
+              jsonrpc: "2.0",
+              method: "chat.compacting",
+              params,
+            }).pipe(Effect.ignore)
 
-            // Check if compaction is needed before running it
-            const needsCompact = shouldCompact(systemPromptEstimate, sessionMessages)
-
-            if (needsCompact) {
-              // Notify client that compaction is starting (bypass typed sendEvent)
-              yield* sessionManager.send(sessionId, {
-                jsonrpc: "2.0",
-                method: "chat.compacting",
-                params: { messageId, phase: "start" },
-              } as unknown as ResponseStreamPayload).pipe(Effect.ignore)
-            }
-
-            const compactionResult = yield* Effect.tryPromise({
-              try: () =>
-                compactIfNeeded(
-                  sessionMessages,
-                  systemPromptEstimate,
-                  apiKey,
-                  model,
-                ),
-              catch: (error) => {
-                console.error(`[ChatProcessor] Compaction error:`, error)
-                return error instanceof Error ? error : new Error(String(error))
-              },
-            }).pipe(
-              Effect.catchAll(() => Effect.succeed(null))
-            )
-
-            if (compactionResult?.compacted) {
-              // Update session with compacted messages
-              yield* sessionManager.replaceMessages(sessionId, compactionResult.messages).pipe(
-                Effect.ignore
-              )
-              sessionMessages = compactionResult.messages
-              console.log(
-                `[ChatProcessor] Session ${sessionId} compacted: ` +
-                `${compactionResult.messagesCompacted} messages summarized, ` +
-                `~${Math.round(compactionResult.tokensBefore / 1000)}K → ` +
-                `~${Math.round(compactionResult.tokensAfter / 1000)}K tokens`
-              )
-
-              // Notify client that compaction finished
-              yield* sessionManager.send(sessionId, {
-                jsonrpc: "2.0",
-                method: "chat.compacting",
-                params: {
-                  messageId,
-                  phase: "done",
-                  messagesCompacted: compactionResult.messagesCompacted,
-                },
-              } as unknown as ResponseStreamPayload).pipe(Effect.ignore)
-            } else if (needsCompact) {
-              // Compaction was expected but didn't happen — clear the indicator
-              yield* sessionManager.send(sessionId, {
-                jsonrpc: "2.0",
-                method: "chat.compacting",
-                params: { messageId, phase: "done" },
-              } as unknown as ResponseStreamPayload).pipe(Effect.ignore)
-            }
-          }
+          sessionMessages = yield* maybeCompactSessionMessages({
+            sessionId,
+            messageId,
+            model,
+            apiKey,
+            sessionMessages,
+            sendCompactionNotification,
+            replaceSessionMessages: (messages) =>
+              sessionManager.replaceMessages(sessionId, messages).pipe(Effect.ignore),
+          })
 
           // Create agent service with session's message history
           const agentService = createAgentServiceLive(
-            () => [...messages] as ChatMessage[],
+            () => [...sessionMessages],
             agentId,
             characterState,
             sendPoseChange,
@@ -273,8 +228,7 @@ export class ChatProcessor extends Effect.Service<ChatProcessor>()(
             soulRuntime
           )
 
-          let accumulatedContent = ""
-          let completed = false
+          const streamState = createStreamEventState()
 
           // Run the agent stream
           console.log(`[ChatProcessor] Starting agent stream...`)
@@ -292,73 +246,28 @@ export class ChatProcessor extends Effect.Service<ChatProcessor>()(
 
             yield* stream.pipe(
               Stream.tap((event: AgentStreamEvent) =>
-                Effect.gen(function* () {
-                  // Check for cancellation
-                  if (abortController.signal.aborted) {
-                    return
-                  }
-
-                  switch (event.type) {
-                    case "text_delta": {
-                      accumulatedContent += event.delta
-                      emitter.addTextDelta(event.delta)
-                      break
-                    }
-
-                    case "tool_start": {
-                      emitter.addToolCall(event.toolCallId, event.toolName, event.arguments)
-                      break
-                    }
-
-                    case "tool_end": {
-                      emitter.addToolResult(event.toolCallId, event.toolName, event.result)
-                      break
-                    }
-
-                    case "done": {
-                      accumulatedContent = sanitizeAssistantOutput(event.message.content)
-                      emitter.complete("completed")
-                      completed = true
-
-                      const assistantMessage: ChatMessage = {
-                        id: `${messageId}_response`,
-                        role: "assistant",
-                        content: accumulatedContent,
-                        timestamp: Date.now(),
-                      }
-                      yield* sessionManager.addMessage(sessionId, assistantMessage).pipe(
-                        Effect.ignore
-                      )
-                      break
-                    }
-
-                    case "error": {
-                      emitter.fail(event.error)
-                      completed = true
-                      break
-                    }
-                  }
+                handleAgentStreamEvent({
+                  event,
+                  abortSignal: abortController.signal,
+                  emitter,
+                  sessionManager,
+                  sessionId,
+                  messageId,
+                  state: streamState,
                 })
               ),
               Stream.runDrain
             )
 
-            if (!completed) {
+            if (!streamState.completed) {
               emitter.complete("completed")
             }
 
-            // Clear streaming state
-            yield* sessionManager.setActiveMessage(sessionId, null).pipe(
-              Effect.ignore
-            )
-            yield* sessionManager.setStreaming(sessionId, false).pipe(
-              Effect.ignore
-            )
-
-            // Remove from active streams
-            yield* Ref.update(activeStreamsRef, (streams) =>
-              HashMap.remove(streams, sessionId)
-            )
+            yield* cleanupSessionStreamingState({
+              sessionManager,
+              activeStreamsRef,
+              sessionId,
+            })
           }).pipe(
             Effect.catchAll((error) =>
               Effect.gen(function* () {
@@ -366,18 +275,11 @@ export class ChatProcessor extends Effect.Service<ChatProcessor>()(
                 console.error(`[ChatProcessor] Stream error [${extractErrorTag(error)}]:`, errorMessage)
                 emitter.fail(errorMessage)
 
-                // Clear streaming state
-                yield* sessionManager.setActiveMessage(sessionId, null).pipe(
-                  Effect.ignore
-                )
-                yield* sessionManager.setStreaming(sessionId, false).pipe(
-                  Effect.ignore
-                )
-
-                // Remove from active streams
-                yield* Ref.update(activeStreamsRef, (streams) =>
-                  HashMap.remove(streams, sessionId)
-                )
+                yield* cleanupSessionStreamingState({
+                  sessionManager,
+                  activeStreamsRef,
+                  sessionId,
+                })
               })
             )
           )
@@ -423,17 +325,11 @@ export class ChatProcessor extends Effect.Service<ChatProcessor>()(
 
             activeStream.emitError("Response cancelled")
 
-            // Remove from active streams
-            yield* Ref.update(activeStreamsRef, (s) =>
-              HashMap.remove(s, sessionId)
-            )
-
-            yield* sessionManager.setActiveMessage(sessionId, null).pipe(
-              Effect.ignore
-            )
-            yield* sessionManager.setStreaming(sessionId, false).pipe(
-              Effect.ignore
-            )
+            yield* cleanupSessionStreamingState({
+              sessionManager,
+              activeStreamsRef,
+              sessionId,
+            })
           }
         })
 

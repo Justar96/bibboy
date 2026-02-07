@@ -7,7 +7,7 @@
     "dev": "vite --config vite.config.ts",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "lint": "eslint src/"
+    "lint": "oxlint src/"
   },
   "dependencies": {
     "@effect/platform": "catalog:",

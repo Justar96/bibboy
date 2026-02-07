@@ -1,39 +1,30 @@
-import Phaser from "phaser"
-import type { AgentPose, CharacterState } from "@bibboy/shared"
-import { PixelBoy } from "../sprites/PixelBoy"
+import * as Phaser from "phaser"
+import type { AgentPose, CanvasCharacterBlueprint, CanvasOp, CharacterState, SoulState, SoulStage } from "@bibboy/shared"
+import { SoulCharacter } from "../sprites/SoulCharacter"
 import { SpeechBubble } from "../ui/SpeechBubble"
 
-const GROUND_Y_OFFSET = 40 // distance from bottom of canvas to ground line
-const BOY_MARGIN = 80 // horizontal margin for wandering bounds
-const SPRITE_PX = 16 // base sprite size in pixels
+const GROUND_Y_OFFSET = 40
+const BOY_MARGIN = 80
+const SPRITE_HEIGHT = 5 * 4 * 2 + 12 // orb radius + aura + margin
 
-const MOBILE_HEIGHT_THRESHOLD = 240 // canvas height below which we use larger sprites
-const SPRITE_SCALE_MOBILE = 6
-const SPRITE_SCALE_DEFAULT = 5
-const ENTRANCE_START_X = -30 // off-screen left, where boy walks in from
-const BUBBLE_GAP = 12 // vertical gap between sprite top and bubble bottom
-const LONG_RESPONSE_THRESHOLD = 5 // chunk count to trigger celebration
-const CHUNK_LINGER_MS = 800 // how long last chunk stays visible before hiding
+const ENTRANCE_START_X = -30
+const BUBBLE_GAP = 12
+const LONG_RESPONSE_THRESHOLD = 5
+const CHUNK_LINGER_MS = 800
 
 const GROUND_LINE_WIDTH = 1
 const GROUND_LINE_COLOR = 0xe8e8e8
 const GROUND_LINE_ALPHA = 0.6
 
 export class ChatScene extends Phaser.Scene {
-  private boy!: PixelBoy
+  private boy!: SoulCharacter
   private bubble: SpeechBubble | null = null
   private groundLine!: Phaser.GameObjects.Graphics
 
-  private spriteScale = 5
   private chunks: string[] = []
   private chunkIndex = 0
   private isShowingChunks = false
   private hasEntrance = false
-
-  /** Computed sprite height based on current scale */
-  private get spriteHeight(): number {
-    return SPRITE_PX * this.spriteScale
-  }
 
   constructor() {
     super("ChatScene")
@@ -42,22 +33,16 @@ export class ChatScene extends Phaser.Scene {
   create(): void {
     const { width, height } = this.scale
 
-    // Background color
     this.cameras.main.setBackgroundColor("#FAFAFA")
 
-    // Subtle ground line near the bottom
     this.groundLine = this.add.graphics()
     this.drawGroundLine(width, height)
 
-    // Compute sprite scale: bigger on shorter (mobile) canvases
-    this.spriteScale = height <= MOBILE_HEIGHT_THRESHOLD ? SPRITE_SCALE_MOBILE : SPRITE_SCALE_DEFAULT
-
-    // Create the pixel boy at center, standing on the ground line
     const groundY = height - GROUND_Y_OFFSET
-    this.boy = new PixelBoy(this, width / 2, groundY, this.spriteScale)
+    this.boy = new SoulCharacter(this, width / 2, groundY)
     this.boy.setBounds(BOY_MARGIN, width - BOY_MARGIN)
 
-    // Entrance animation: walk in from left, stop center, wave
+    // Entrance animation
     this.boy.setPosition(ENTRANCE_START_X, groundY)
     this.boy.walkTo(width / 2, () => {
       this.hasEntrance = true
@@ -109,6 +94,25 @@ export class ChatScene extends Phaser.Scene {
     this.boy.setCharacterState("compacting")
   }
 
+  /** Apply a canvas blueprint update (from WebSocket patch/snapshot). */
+  handleCanvasPatch(_op: CanvasOp | null, blueprint: CanvasCharacterBlueprint, _version: number): void {
+    if (!this.boy) return
+    this.boy.setBlueprint(blueprint)
+    this.boy.flash()
+  }
+
+  /** Update soul state (from WebSocket snapshot). */
+  handleSoulStateUpdate(state: SoulState): void {
+    if (!this.boy) return
+    this.boy.setSoulState(state)
+  }
+
+  /** Update soul stage (from WebSocket stage_change). */
+  handleSoulStageChange(stage: SoulStage): void {
+    if (!this.boy) return
+    this.boy.setSoulStage(stage)
+  }
+
   /** Response arrived as chunks — start showing them. */
   handleResponseChunks(chunks: string[]): void {
     if (!this.boy || chunks.length === 0) return
@@ -148,7 +152,7 @@ export class ChatScene extends Phaser.Scene {
     const { height } = this.scale
     const groundY = height - GROUND_Y_OFFSET
     const bubbleX = this.boy.x
-    const bubbleY = groundY - this.spriteHeight - BUBBLE_GAP
+    const bubbleY = groundY - SPRITE_HEIGHT - BUBBLE_GAP
 
     if (this.bubble) {
       // Update position to follow boy, then show chunk
@@ -216,7 +220,7 @@ export class ChatScene extends Phaser.Scene {
 
     // Update bubble position if visible
     if (this.bubble) {
-      const bubbleY = groundY - this.spriteHeight - BUBBLE_GAP
+      const bubbleY = groundY - SPRITE_HEIGHT - BUBBLE_GAP
       this.bubble.updatePosition(this.boy.x, bubbleY)
     }
   }

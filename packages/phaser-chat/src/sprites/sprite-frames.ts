@@ -1,4 +1,4 @@
-import type Phaser from "phaser"
+import type * as Phaser from "phaser"
 
 // ---------------------------------------------------------------------------
 // Color palette for textures.generate()

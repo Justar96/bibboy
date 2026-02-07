@@ -32,21 +32,23 @@ interface GeminiBatchEmbeddingResponse {
   }>
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+}
+
+function isNumberArray(value: unknown): value is number[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "number" && Number.isFinite(entry))
+}
+
 function isGeminiEmbeddingResponse(data: unknown): data is GeminiEmbeddingResponse {
-  if (!data || typeof data !== "object") return false
-  const obj = data as { embedding?: unknown }
-  if (!obj.embedding || typeof obj.embedding !== "object") return false
-  const emb = obj.embedding as { values?: unknown }
-  return Array.isArray(emb.values)
+  if (!isRecord(data)) return false
+  if (!isRecord(data.embedding)) return false
+  return isNumberArray(data.embedding.values)
 }
 
 function isGeminiBatchEmbeddingResponse(data: unknown): data is GeminiBatchEmbeddingResponse {
-  if (!data || typeof data !== "object") return false
-  const obj = data as { embeddings?: unknown }
-  if (!Array.isArray(obj.embeddings)) return false
-  return obj.embeddings.every(
-    (e: unknown) => e && typeof e === "object" && Array.isArray((e as { values?: unknown }).values)
-  )
+  if (!isRecord(data) || !Array.isArray(data.embeddings)) return false
+  return data.embeddings.every((entry) => isRecord(entry) && isNumberArray(entry.values))
 }
 
 /**
@@ -216,8 +218,9 @@ const CHARS_PER_TOKEN = 4 // Approximate
  * Split text into overlapping chunks for embedding.
  */
 export function chunkText(text: string, options?: ChunkOptions): string[] {
-  const tokensPerChunk = options?.tokens ?? DEFAULT_CHUNK_TOKENS
-  const overlapTokens = options?.overlap ?? DEFAULT_CHUNK_OVERLAP
+  const tokensPerChunk = Math.max(1, options?.tokens ?? DEFAULT_CHUNK_TOKENS)
+  const requestedOverlapTokens = Math.max(0, options?.overlap ?? DEFAULT_CHUNK_OVERLAP)
+  const overlapTokens = Math.min(requestedOverlapTokens, Math.max(0, tokensPerChunk - 1))
 
   const charsPerChunk = tokensPerChunk * CHARS_PER_TOKEN
   const overlapChars = overlapTokens * CHARS_PER_TOKEN
@@ -253,7 +256,11 @@ export function chunkText(text: string, options?: ChunkOptions): string[] {
     }
 
     chunks.push(text.slice(start, end).trim())
-    start = end - overlapChars
+
+    // Ensure strict forward progress even with high-overlap settings and
+    // aggressive breakpoints to avoid infinite loops.
+    const nextStart = end - overlapChars
+    start = Math.max(start + 1, nextStart)
   }
 
   return chunks.filter(Boolean)

@@ -37,12 +37,38 @@ export interface AgentTool {
 }
 
 /**
+ * Tool group names for dynamic tool loading.
+ */
+export type ToolGroupName = "core" | "web" | "canvas" | "soul" | "workspace"
+
+/**
+ * Tool group metadata for the request_tools meta-tool.
+ */
+export interface ToolGroupInfo {
+  name: ToolGroupName
+  description: string
+  toolNames: string[]
+  loaded: boolean
+}
+
+/**
  * Tool registry for managing available tools.
+ * Supports dynamic tool loading via addTools() for modern agent patterns.
  */
 export interface ToolRegistry {
   tools: AgentTool[]
   get: (name: string) => AgentTool | undefined
   getDefinitions: () => FunctionToolDefinition[]
+  /** Dynamically add tools to the registry mid-conversation */
+  addTools: (newTools: AgentTool[]) => void
+  /** Get tool group metadata for request_tools */
+  getGroups: () => ToolGroupInfo[]
+  /** Mark a group as loaded */
+  markGroupLoaded: (group: ToolGroupName) => void
+  /** Check if a group is loaded */
+  isGroupLoaded: (group: ToolGroupName) => boolean
+  /** Get a compact summary of available tools for system prompt injection */
+  getToolSummary: () => string
 }
 
 /**
@@ -53,6 +79,189 @@ export interface FunctionToolDefinition {
   name: string
   description: string
   parameters: ToolParameterSchema
+}
+
+// ============================================================================
+// Tool Wrapping (OpenClaw-inspired middleware pattern)
+// ============================================================================
+
+/** Context passed to each tool execution for cancellation and timeout. */
+export interface ToolExecutionContext {
+  /** Signal for request-level cancellation */
+  abortSignal?: AbortSignal
+  /** Per-tool timeout in ms (default: 30_000) */
+  timeoutMs?: number
+  /** Current loop iteration for budget-aware tools */
+  iteration?: number
+  /** Per-session metrics tracker */
+  metrics?: ToolExecutionMetrics
+}
+
+// ============================================================================
+// Tool Execution Metrics (per-session tracking)
+// ============================================================================
+
+export interface ToolMetricEntry {
+  count: number
+  totalDurationMs: number
+  errors: number
+  lastUsedAt: number
+}
+
+/** Tracks tool execution metrics across an agent session. */
+export interface ToolExecutionMetrics {
+  /** Per-tool metrics keyed by tool name */
+  tools: Map<string, ToolMetricEntry>
+  /** Record a tool execution */
+  record: (name: string, durationMs: number, error: boolean) => void
+  /** Get summary for system prompt injection */
+  getSummary: () => string
+}
+
+/** Create a new metrics tracker. */
+export function createToolExecutionMetrics(): ToolExecutionMetrics {
+  const tools = new Map<string, ToolMetricEntry>()
+
+  return {
+    tools,
+    record(name: string, durationMs: number, error: boolean) {
+      const entry = tools.get(name) ?? { count: 0, totalDurationMs: 0, errors: 0, lastUsedAt: 0 }
+      entry.count++
+      entry.totalDurationMs += durationMs
+      if (error) entry.errors++
+      entry.lastUsedAt = Date.now()
+      tools.set(name, entry)
+    },
+    getSummary(): string {
+      if (tools.size === 0) return ""
+      const lines = ["## Tool Usage This Session"]
+      for (const [name, entry] of tools) {
+        const avg = Math.round(entry.totalDurationMs / entry.count)
+        lines.push(`- ${name}: ${entry.count} calls, avg ${avg}ms${entry.errors > 0 ? `, ${entry.errors} errors` : ""}`)
+      }
+      return lines.join("\n")
+    },
+  }
+}
+
+/** Default per-tool timeout */
+const DEFAULT_TOOL_TIMEOUT_MS = 30_000
+
+/**
+ * Wrap a tool with per-execution timeout.
+ * Inspired by OpenClaw's wrapToolWithAbortSignal cascade.
+ */
+export function wrapToolWithTimeout(
+  tool: AgentTool,
+  ctx: ToolExecutionContext
+): AgentTool {
+  const timeoutMs = ctx.timeoutMs ?? DEFAULT_TOOL_TIMEOUT_MS
+  return {
+    ...tool,
+    execute: async (toolCallId, args) => {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), timeoutMs)
+
+      // Propagate parent abort signal
+      if (ctx.abortSignal) {
+        if (ctx.abortSignal.aborted) {
+          clearTimeout(timer)
+          return {
+            toolCallId,
+            content: [{ type: "text", text: JSON.stringify({ error: "Cancelled" }) }],
+            error: "Tool execution cancelled",
+          }
+        }
+        ctx.abortSignal.addEventListener("abort", () => {
+          clearTimeout(timer)
+          controller.abort()
+        }, { once: true })
+      }
+
+      try {
+        const result = await Promise.race([
+          tool.execute(toolCallId, args),
+          new Promise<never>((_, reject) => {
+            controller.signal.addEventListener("abort", () => {
+              reject(new Error(`Tool ${tool.name} timed out after ${timeoutMs}ms`))
+            }, { once: true })
+          }),
+        ])
+        return result
+      } catch (error) {
+        return {
+          toolCallId,
+          content: [{ type: "text", text: JSON.stringify({ error: error instanceof Error ? error.message : String(error) }) }],
+          error: error instanceof Error ? error.message : String(error),
+        }
+      } finally {
+        clearTimeout(timer)
+      }
+    },
+  }
+}
+
+/**
+ * Apply all tool wrappers in cascade order.
+ * Wrapper pipeline: metrics → logging → timeout (innermost runs first).
+ */
+export function applyToolWrappers(
+  tool: AgentTool,
+  ctx: ToolExecutionContext
+): AgentTool {
+  let wrapped = wrapToolWithTimeout(tool, ctx)
+  wrapped = wrapToolWithLogging(wrapped)
+  if (ctx.metrics) {
+    wrapped = wrapToolWithMetrics(wrapped, ctx.metrics)
+  }
+  return wrapped
+}
+
+/**
+ * Wrap a tool with execution logging.
+ */
+export function wrapToolWithLogging(tool: AgentTool): AgentTool {
+  return {
+    ...tool,
+    execute: async (toolCallId, args) => {
+      const start = Date.now()
+      try {
+        const result = await tool.execute(toolCallId, args)
+        const duration = Date.now() - start
+        if (duration > 5000) {
+          console.warn(`[tool:${tool.name}] Slow execution: ${duration}ms`)
+        }
+        return result
+      } catch (error) {
+        const duration = Date.now() - start
+        console.error(`[tool:${tool.name}] Failed after ${duration}ms:`, error instanceof Error ? error.message : error)
+        throw error
+      }
+    },
+  }
+}
+
+/**
+ * Wrap a tool with metrics tracking.
+ */
+export function wrapToolWithMetrics(
+  tool: AgentTool,
+  metrics: ToolExecutionMetrics
+): AgentTool {
+  return {
+    ...tool,
+    execute: async (toolCallId, args) => {
+      const start = Date.now()
+      try {
+        const result = await tool.execute(toolCallId, args)
+        metrics.record(tool.name, Date.now() - start, !!result.error)
+        return result
+      } catch (error) {
+        metrics.record(tool.name, Date.now() - start, true)
+        throw error
+      }
+    },
+  }
 }
 
 // ============================================================================

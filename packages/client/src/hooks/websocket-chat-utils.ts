@@ -25,6 +25,8 @@ export interface ToolExecution {
   readonly startedAt?: number
 }
 
+export type JsonRecord = Record<string, unknown>
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -57,19 +59,43 @@ export function generateSessionId(): string {
   return `session_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
 }
 
+export function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+}
+
+export function tryJsonParse(json: string): unknown | undefined {
+  try {
+    return JSON.parse(json)
+  } catch {
+    return undefined
+  }
+}
+
+function isToolExecutionResult(value: unknown): value is ToolExecutionResult {
+  if (!isJsonRecord(value)) return false
+  if (typeof value.toolCallId !== "string") return false
+  if (!Array.isArray(value.content)) return false
+  for (const block of value.content) {
+    if (!isJsonRecord(block)) return false
+    if (block.type !== "text") return false
+    if (typeof block.text !== "string") return false
+  }
+  if ("error" in value && value.error !== undefined && typeof value.error !== "string") {
+    return false
+  }
+  return true
+}
+
 /**
  * Parse a tool result from raw output string.
  * Attempts to parse as JSON first, falls back to text content.
  */
 export function parseToolResult(callId: string, output: string): ToolExecutionResult {
-  try {
-    const parsed = JSON.parse(output) as ToolExecutionResult
-    if (parsed && typeof parsed === "object" && parsed.toolCallId) {
-      return parsed
-    }
-  } catch {
-    // fall through to default
+  const parsed = tryJsonParse(output)
+  if (isToolExecutionResult(parsed)) {
+    return parsed
   }
+
   return {
     toolCallId: callId,
     content: [{ type: "text", text: output }],
@@ -80,11 +106,22 @@ export function parseToolResult(callId: string, output: string): ToolExecutionRe
  * Safely parse JSON with fallback.
  */
 export function safeJsonParse<T>(json: string, fallback: T): T {
-  try {
-    return JSON.parse(json) as T
-  } catch {
+  const parsed = tryJsonParse(json)
+  if (parsed === undefined) {
     return fallback
   }
+  return parsed as T
+}
+
+export function safeJsonParseObject(
+  json: string,
+  fallback: JsonRecord = {}
+): JsonRecord {
+  const parsed = tryJsonParse(json)
+  if (!isJsonRecord(parsed)) {
+    return fallback
+  }
+  return parsed
 }
 
 function isLayerShape(value: unknown): value is { variant: string; color: string } {

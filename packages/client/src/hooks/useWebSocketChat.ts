@@ -1,30 +1,34 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react"
 import {
-  isAgentPose,
   type AgentPose,
   type CanvasCharacterBlueprint,
   type CanvasOp,
   type CharacterState,
   type ChatMessage,
-  type JsonRpcSuccessResponse,
-  type JsonRpcErrorResponse,
   type TypingState,
-  type ResponseStreamEvent,
   type SoulState,
   type SoulStage,
 } from "@bibboy/shared"
 import {
   getDefaultWebSocketUrl,
   generateSessionId,
-  parseToolResult,
-  safeJsonParse,
-  isCanvasBlueprint,
-  isCanvasOp,
+  isJsonRecord,
+  tryJsonParse,
   calculateReconnectDelay,
   MAX_RECONNECT_ATTEMPTS,
   type ConnectionState,
   type ToolExecution,
 } from "./websocket-chat-utils"
+import {
+  isJsonRpcErrorResponse,
+  isJsonRpcSuccessResponse,
+  readResultMessageId,
+  readString,
+} from "./websocket-chat-parsers"
+import {
+  createNotificationHandlers,
+  createResponseEventHandlers,
+} from "./websocket-chat-event-handlers"
 
 // Re-export types for consumers
 export type { ConnectionState, ToolExecution } from "./websocket-chat-utils"
@@ -167,295 +171,123 @@ export function useWebSocketChat(
     return sessionIdRef.current
   }, [])
 
+  const clearToolTracking = useCallback(() => {
+    toolArgsRef.current.clear()
+    toolItemToCallIdRef.current.clear()
+  }, [])
+
+  const resetStreamingState = useCallback(() => {
+    setStreamingContent("")
+    setActiveTools([])
+    setActiveMessageId(null)
+    clearToolTracking()
+  }, [clearToolTracking])
+
+  const stopTypingAndResetStreamingState = useCallback(() => {
+    setIsTyping(false)
+    setTypingState(null)
+    resetStreamingState()
+  }, [resetStreamingState])
+
+  const startThinking = useCallback(() => {
+    setIsTyping(true)
+    setTypingState("thinking")
+  }, [])
+
+  const responseEventHandlers = useMemo(
+    () =>
+      createResponseEventHandlers({
+        startThinking,
+        stopTypingAndResetStreamingState,
+        onErrorRef,
+        toolItemToCallIdRef,
+        toolArgsRef,
+        streamingContentRef,
+        setIsTyping,
+        setTypingState,
+        setStreamingContent,
+        setActiveTools,
+        setActiveMessageId,
+        setMessages,
+      }),
+    [startThinking, stopTypingAndResetStreamingState]
+  )
+
+  const notificationHandlers = useMemo(
+    () =>
+      createNotificationHandlers({
+        reconnectAttemptsRef,
+        onSessionResumedRef,
+        setIsCompacting,
+        setPendingPoseChange,
+        setCanvasVersion,
+        setCanvasBlueprint,
+        setLastCanvasOp,
+        setSoulState,
+        setSoulStage,
+      }),
+    []
+  )
+
   // Handle incoming messages
   const handleMessage = useCallback(
     (event: MessageEvent) => {
-      let msg: unknown
-      try {
-        msg = JSON.parse(event.data as string)
-      } catch {
+      if (typeof event.data !== "string") {
         return
       }
 
-      const data = msg as Record<string, unknown>
+      let msg: unknown
+      msg = tryJsonParse(event.data)
+      if (msg === undefined) {
+        return
+      }
+
+      if (!isJsonRecord(msg)) {
+        return
+      }
+      const data = msg
 
       // Handle JSON-RPC responses (have id)
-      if ("id" in data && typeof data.id === "string") {
-        const pending = pendingRequestsRef.current.get(data.id)
+      const responseId = readString(data.id)
+      if (responseId) {
+        const pending = pendingRequestsRef.current.get(responseId)
         if (pending) {
-          pendingRequestsRef.current.delete(data.id)
-          if ("error" in data) {
-            const errorResponse = data as JsonRpcErrorResponse
-            pending.reject(new Error(errorResponse.error.message))
-          } else {
-            const successResponse = data as JsonRpcSuccessResponse
-            pending.resolve(successResponse.result)
+          pendingRequestsRef.current.delete(responseId)
+          if (isJsonRpcErrorResponse(data)) {
+            pending.reject(new Error(data.error.message))
+            return
           }
+          if (isJsonRpcSuccessResponse(data)) {
+            pending.resolve(data.result)
+            return
+          }
+          pending.reject(new Error("Invalid JSON-RPC response payload"))
           return
         }
       }
 
       // Handle Responses-style events
-      if ("type" in data && typeof data.type === "string") {
-        const eventData = data as ResponseStreamEvent
-
-        switch (eventData.type) {
-          case "response.created": {
-            setIsTyping(true)
-            setTypingState("thinking")
-            setActiveMessageId(eventData.response.id)
-            break
-          }
-
-          case "response.queued": {
-            setIsTyping(true)
-            setTypingState("thinking")
-            break
-          }
-
-          case "response.in_progress": {
-            setIsTyping(true)
-            setTypingState("streaming")
-            break
-          }
-
-          case "response.output_text.delta": {
-            setStreamingContent((prev) => prev + eventData.delta)
-            break
-          }
-
-          case "response.output_text.done": {
-            setStreamingContent(eventData.text)
-            break
-          }
-
-          case "response.refusal.delta": {
-            setStreamingContent((prev) => prev + eventData.delta)
-            break
-          }
-
-          case "response.refusal.done": {
-            setStreamingContent(eventData.refusal)
-            break
-          }
-
-          case "response.output_item.added": {
-            const item = eventData.item
-            if (item.type === "function_call") {
-              toolItemToCallIdRef.current.set(item.id, item.call_id)
-              if (typeof item.arguments === "string") {
-                toolArgsRef.current.set(item.id, item.arguments)
-              }
-
-              setTypingState("tool_executing")
-              setActiveTools((prev) => [
-                ...prev,
-                {
-                  id: item.call_id,
-                  name: item.name,
-                  arguments: safeJsonParse<Record<string, unknown>>(
-                    item.arguments ?? "{}",
-                    {}
-                  ),
-                  status: "running",
-                  rawArguments: item.arguments ?? "",
-                  startedAt: Date.now(),
-                },
-              ])
-            } else if (item.type === "function_call_output") {
-              const result = parseToolResult(item.call_id, item.output)
-              setActiveTools((prev) =>
-                prev.map((t) =>
-                  t.id === item.call_id
-                    ? {
-                        ...t,
-                        status: result.error ? ("error" as const) : ("completed" as const),
-                        result,
-                        error: result.error,
-                      }
-                    : t
-                )
-              )
-            }
-            break
-          }
-          case "response.function_call_arguments.delta": {
-            const callId = toolItemToCallIdRef.current.get(eventData.item_id)
-            if (callId) {
-              const existingArgs = toolArgsRef.current.get(eventData.item_id) ?? ""
-              const nextArgs = existingArgs + eventData.delta
-              toolArgsRef.current.set(eventData.item_id, nextArgs)
-              setActiveTools((prev) =>
-                prev.map((t) =>
-                  t.id === callId
-                    ? {
-                        ...t,
-                        rawArguments: nextArgs,
-                        arguments: safeJsonParse<Record<string, unknown>>(
-                          nextArgs,
-                          t.arguments
-                        ),
-                      }
-                    : t
-                )
-              )
-            }
-            break
-          }
-          case "response.function_call_arguments.done": {
-            const callId = toolItemToCallIdRef.current.get(eventData.item_id)
-            if (callId) {
-              toolArgsRef.current.set(eventData.item_id, eventData.arguments)
-              setActiveTools((prev) =>
-                prev.map((t) =>
-                  t.id === callId
-                    ? {
-                        ...t,
-                        rawArguments: eventData.arguments,
-                        arguments: safeJsonParse<Record<string, unknown>>(
-                          eventData.arguments,
-                          t.arguments
-                        ),
-                      }
-                    : t
-                )
-              )
-            }
-            break
-          }
-
-          case "response.completed": {
-            const response = eventData.response
-            // Use ref to get current streaming content without dependency
-            let messageContent = streamingContentRef.current
-            for (const item of response.output) {
-              if (item.type === "message") {
-                for (const part of item.content) {
-                  if (part.type === "output_text") {
-                    messageContent = part.text
-                  }
-                  if (part.type === "refusal") {
-                    messageContent = part.refusal
-                  }
-                }
-              }
-            }
-
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: response.id,
-                role: "assistant" as const,
-                content: messageContent,
-                timestamp: Date.now(),
-              },
-            ])
-
-            setIsTyping(false)
-            setTypingState(null)
-            setStreamingContent("")
-            setActiveTools([])
-            setActiveMessageId(null)
-            toolArgsRef.current.clear()
-            toolItemToCallIdRef.current.clear()
-            break
-          }
-
-          case "response.failed": {
-            const errorMessage = eventData.response.error?.message ?? "Response failed"
-            onErrorRef.current?.(new Error(errorMessage))
-            setIsTyping(false)
-            setTypingState(null)
-            setStreamingContent("")
-            setActiveTools([])
-            setActiveMessageId(null)
-            toolArgsRef.current.clear()
-            toolItemToCallIdRef.current.clear()
-            break
-          }
-
-          case "error": {
-            onErrorRef.current?.(new Error(eventData.error.message))
-            setIsTyping(false)
-            setTypingState(null)
-            setStreamingContent("")
-            setActiveTools([])
-            setActiveMessageId(null)
-            toolArgsRef.current.clear()
-            toolItemToCallIdRef.current.clear()
-            break
-          }
+      const eventType = readString(data.type)
+      if (eventType) {
+        const handler = responseEventHandlers[eventType]
+        if (handler) {
+          handler(data)
         }
 
         return
       }
 
       // Handle notifications (no id)
-      if ("method" in data && typeof data.method === "string") {
-        const params = (data as { params?: Record<string, unknown> }).params ?? {}
-
-        if (data.method === "session.resumed") {
-          const messageCount = params.messageCount as number
-          reconnectAttemptsRef.current = 0
-          onSessionResumedRef.current?.(messageCount)
-        }
-
-        if (data.method === "chat.compacting") {
-          const phase = params.phase as string
-          setIsCompacting(phase === "start")
-        }
-
-        if (data.method === "character.pose_change") {
-          const pose = params.pose
-          if (typeof pose === "string" && isAgentPose(pose)) {
-            setPendingPoseChange(pose)
-          }
-        }
-
-        if (data.method === "canvas.state_snapshot") {
-          const version = params.version
-          const blueprint = params.blueprint
-          if (typeof version === "number" && isCanvasBlueprint(blueprint)) {
-            setCanvasVersion(version)
-            setCanvasBlueprint(blueprint)
-            setLastCanvasOp(null)
-          }
-        }
-
-        if (data.method === "canvas.state_patch") {
-          const version = params.version
-          const blueprint = params.blueprint
-          const op = params.op
-          if (typeof version === "number" && isCanvasBlueprint(blueprint)) {
-            setCanvasVersion(version)
-            setCanvasBlueprint(blueprint)
-            setLastCanvasOp(isCanvasOp(op) ? op : null)
-          }
-        }
-
-        if (data.method === "soul.state_snapshot") {
-          const state = params.state as SoulState | undefined
-          if (state && typeof state.stage === "string") {
-            setSoulState(state)
-            setSoulStage(state.stage)
-          }
-        }
-
-        if (data.method === "soul.stage_change") {
-          const stage = params.stage as SoulStage | undefined
-          if (typeof stage === "string") {
-            setSoulStage(stage)
-            // Update full soul state if we have one, otherwise create partial
-            setSoulState((prev) =>
-              prev
-                ? { ...prev, stage, interactionCount: (params.interactionCount as number) ?? prev.interactionCount }
-                : null
-            )
-          }
+      const method = readString(data.method)
+      if (method) {
+        const params = isJsonRecord(data.params) ? data.params : {}
+        const handler = notificationHandlers[method]
+        if (handler) {
+          handler(params)
         }
       }
     },
-    [] // callbacks accessed via stable refs
+    [notificationHandlers, responseEventHandlers]
   )
 
 // Connect to WebSocket
@@ -582,14 +414,17 @@ export function useWebSocketChat(
             timestamp: Date.now(),
           },
         ])
-        setIsTyping(true)
-        setTypingState("thinking")
+        startThinking()
 
         // Store pending request handler
         pendingRequestsRef.current.set(requestId, {
           resolve: (result) => {
-            const r = result as { messageId: string }
-            resolve(r.messageId)
+            const messageId = readResultMessageId(result)
+            if (messageId !== null) {
+              resolve(messageId)
+              return
+            }
+            reject(new Error("Invalid chat.send response: missing messageId"))
           },
           reject,
         })
@@ -609,7 +444,7 @@ export function useWebSocketChat(
         wsRef.current.send(JSON.stringify(request))
       })
     },
-    [agentId]
+    [agentId, startThinking]
   )
 
   // Cancel current message generation
@@ -628,28 +463,20 @@ export function useWebSocketChat(
       })
     )
 
-    // Reset typing state
-    setIsTyping(false)
-    setTypingState(null)
-    setStreamingContent("")
-    setActiveTools([])
-    setActiveMessageId(null)
-  }, [])
+    // Reset typing/stream state
+    stopTypingAndResetStreamingState()
+  }, [stopTypingAndResetStreamingState])
 
   // Clear all messages
   const clearMessages = useCallback(() => {
     setMessages([])
-    setStreamingContent("")
-    setActiveTools([])
-    setActiveMessageId(null)
+    resetStreamingState()
     setCanvasBlueprint(null)
     setCanvasVersion(null)
     setLastCanvasOp(null)
     setSoulState(null)
     setSoulStage(null)
-    toolArgsRef.current.clear()
-    toolItemToCallIdRef.current.clear()
-  }, [])
+  }, [resetStreamingState])
 
   // Auto-connect on mount if enabled
   useEffect(() => {

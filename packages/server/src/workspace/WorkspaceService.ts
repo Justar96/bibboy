@@ -1,4 +1,4 @@
-import { join } from "path"
+import { join, resolve, sep } from "path"
 import { Effect } from "effect"
 import { FileSystem } from "@effect/platform"
 import { BunContext } from "@effect/platform-bun"
@@ -42,6 +42,45 @@ const CONTEXT_FILES = [
 const MAX_FILE_CHARS = 20000
 const HEAD_RATIO = 0.7  // 70% from head
 const TAIL_RATIO = 0.2  // 20% from tail
+
+const emptyDirectoryEntries: ReadonlyArray<string> = []
+
+function existsSafe(
+  fs: FileSystem.FileSystem,
+  targetPath: string
+): Effect.Effect<boolean, never> {
+  return fs.exists(targetPath).pipe(
+    Effect.catchAll(() => Effect.succeed(false))
+  )
+}
+
+function readDirectorySafe(
+  fs: FileSystem.FileSystem,
+  directoryPath: string
+): Effect.Effect<ReadonlyArray<string>, never> {
+  return fs.readDirectory(directoryPath).pipe(
+    Effect.catchAll(() => Effect.succeed(emptyDirectoryEntries))
+  )
+}
+
+function readFileStringSafe(
+  fs: FileSystem.FileSystem,
+  filePath: string
+): Effect.Effect<string, never> {
+  return fs.readFileString(filePath, "utf8").pipe(
+    Effect.catchAll(() => Effect.succeed(""))
+  )
+}
+
+function resolveWorkspaceFilePath(
+  workspaceDir: string,
+  filename: string
+): string | null {
+  const normalizedWorkspaceDir = resolve(workspaceDir)
+  const resolvedFilePath = resolve(normalizedWorkspaceDir, filename)
+  const insideWorkspace = resolvedFilePath.startsWith(`${normalizedWorkspaceDir}${sep}`)
+  return insideWorkspace ? resolvedFilePath : null
+}
 
 // ============================================================================
 // Default Templates (matching OpenClaw)
@@ -212,15 +251,15 @@ function truncateContent(content: string, filename: string): string {
 /**
  * Ensure workspace directory exists with default files (Effect version)
  */
-export const initializeWorkspaceEffect = (agentId: string = "default") =>
+export const initializeWorkspaceEffect = (
+  agentId: string = "default"
+): Effect.Effect<void, never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const workspaceDir = getWorkspaceDir(agentId)
 
     // Create directory if it doesn't exist
-    const dirExists = yield* fs.exists(workspaceDir).pipe(
-      Effect.catchAll(() => Effect.succeed(false))
-    )
+    const dirExists = yield* existsSafe(fs, workspaceDir)
 
     if (!dirExists) {
       yield* fs.makeDirectory(workspaceDir, { recursive: true }).pipe(
@@ -246,31 +285,27 @@ export const initializeWorkspaceEffect = (agentId: string = "default") =>
 /**
  * List all markdown files in workspace (Effect version)
  */
-export const listWorkspaceFilesEffect = (agentId: string = "default") =>
+export const listWorkspaceFilesEffect = (
+  agentId: string = "default"
+): Effect.Effect<WorkspaceFile[], never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const workspaceDir = getWorkspaceDir(agentId)
 
-    const dirExists = yield* fs.exists(workspaceDir).pipe(
-      Effect.catchAll(() => Effect.succeed(false))
-    )
+    const dirExists = yield* existsSafe(fs, workspaceDir)
 
     if (!dirExists) {
-      return [] as WorkspaceFile[]
+      return []
     }
 
     const files: WorkspaceFile[] = []
 
-    const entries = yield* fs.readDirectory(workspaceDir).pipe(
-      Effect.catchAll(() => Effect.succeed([] as string[]))
-    )
+    const entries = yield* readDirectorySafe(fs, workspaceDir)
 
     for (const entry of entries) {
       if (entry.endsWith(".md")) {
         const filePath = join(workspaceDir, entry)
-        const content = yield* fs.readFileString(filePath, "utf8").pipe(
-          Effect.catchAll(() => Effect.succeed(""))
-        )
+        const content = yield* readFileStringSafe(fs, filePath)
 
         if (content) {
           files.push({
@@ -288,52 +323,53 @@ export const listWorkspaceFilesEffect = (agentId: string = "default") =>
 /**
  * Read a specific workspace file (Effect version)
  */
-export const readWorkspaceFileEffect = (agentId: string, filename: string) =>
+export const readWorkspaceFileEffect = (
+  agentId: string,
+  filename: string
+): Effect.Effect<WorkspaceFile | null, never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const workspaceDir = getWorkspaceDir(agentId)
-    const filePath = join(workspaceDir, filename)
+    const filePath = resolveWorkspaceFilePath(workspaceDir, filename)
 
     // Security: prevent path traversal
-    if (!filePath.startsWith(workspaceDir)) {
-      return null as WorkspaceFile | null
+    if (!filePath) {
+      return null
     }
 
-    const fileExists = yield* fs.exists(filePath).pipe(
-      Effect.catchAll(() => Effect.succeed(false))
-    )
+    const fileExists = yield* existsSafe(fs, filePath)
 
     if (!fileExists) {
-      return null as WorkspaceFile | null
+      return null
     }
 
-    const content = yield* fs.readFileString(filePath, "utf8").pipe(
-      Effect.catchAll(() => Effect.succeed(""))
-    )
+    const content = yield* readFileStringSafe(fs, filePath)
 
     if (!content) {
-      return null as WorkspaceFile | null
+      return null
     }
 
     return {
       name: filename,
       path: filePath,
       content,
-    } as WorkspaceFile | null
+    }
   })
 
 /**
  * Write content to a workspace file (Effect version)
  */
-export const writeWorkspaceFileEffect = (agentId: string, filename: string, content: string) =>
+export const writeWorkspaceFileEffect = (
+  agentId: string,
+  filename: string,
+  content: string
+): Effect.Effect<boolean, never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const workspaceDir = getWorkspaceDir(agentId)
 
     // Ensure workspace exists
-    const dirExists = yield* fs.exists(workspaceDir).pipe(
-      Effect.catchAll(() => Effect.succeed(false))
-    )
+    const dirExists = yield* existsSafe(fs, workspaceDir)
 
     if (!dirExists) {
       yield* fs.makeDirectory(workspaceDir, { recursive: true }).pipe(
@@ -341,10 +377,10 @@ export const writeWorkspaceFileEffect = (agentId: string, filename: string, cont
       )
     }
 
-    const filePath = join(workspaceDir, filename)
+    const filePath = resolveWorkspaceFilePath(workspaceDir, filename)
 
     // Security: prevent path traversal
-    if (!filePath.startsWith(workspaceDir)) {
+    if (!filePath) {
       return false
     }
 
@@ -364,7 +400,10 @@ export const writeWorkspaceFileEffect = (agentId: string, filename: string, cont
 /**
  * Delete a workspace file (Effect version)
  */
-export const deleteWorkspaceFileEffect = (agentId: string, filename: string) =>
+export const deleteWorkspaceFileEffect = (
+  agentId: string,
+  filename: string
+): Effect.Effect<boolean, never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     // Protect core files from deletion
     if (Object.keys(DEFAULT_TEMPLATES).includes(filename)) {
@@ -373,16 +412,14 @@ export const deleteWorkspaceFileEffect = (agentId: string, filename: string) =>
 
     const fs = yield* FileSystem.FileSystem
     const workspaceDir = getWorkspaceDir(agentId)
-    const filePath = join(workspaceDir, filename)
+    const filePath = resolveWorkspaceFilePath(workspaceDir, filename)
 
     // Security: prevent path traversal
-    if (!filePath.startsWith(workspaceDir)) {
+    if (!filePath) {
       return false
     }
 
-    const fileExists = yield* fs.exists(filePath).pipe(
-      Effect.catchAll(() => Effect.succeed(false))
-    )
+    const fileExists = yield* existsSafe(fs, filePath)
 
     if (!fileExists) {
       return false
@@ -399,15 +436,15 @@ export const deleteWorkspaceFileEffect = (agentId: string, filename: string) =>
 /**
  * Reset workspace to default state (Effect version)
  */
-export const resetWorkspaceEffect = (agentId: string = "default") =>
+export const resetWorkspaceEffect = (
+  agentId: string = "default"
+): Effect.Effect<void, never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const workspaceDir = getWorkspaceDir(agentId)
 
     // Create directory if needed
-    const dirExists = yield* fs.exists(workspaceDir).pipe(
-      Effect.catchAll(() => Effect.succeed(false))
-    )
+    const dirExists = yield* existsSafe(fs, workspaceDir)
 
     if (!dirExists) {
       yield* fs.makeDirectory(workspaceDir, { recursive: true }).pipe(
@@ -427,7 +464,9 @@ export const resetWorkspaceEffect = (agentId: string = "default") =>
 /**
  * Load context files for system prompt injection (Effect version)
  */
-export const loadContextFilesEffect = (agentId: string = "default") =>
+export const loadContextFilesEffect = (
+  agentId: string = "default"
+): Effect.Effect<EmbeddedContextFile[], never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const workspaceDir = getWorkspaceDir(agentId)
@@ -440,14 +479,10 @@ export const loadContextFilesEffect = (agentId: string = "default") =>
     for (const filename of CONTEXT_FILES) {
       const filePath = join(workspaceDir, filename)
 
-      const fileExists = yield* fs.exists(filePath).pipe(
-        Effect.catchAll(() => Effect.succeed(false))
-      )
+      const fileExists = yield* existsSafe(fs, filePath)
 
       if (fileExists) {
-        const rawContent = yield* fs.readFileString(filePath, "utf8").pipe(
-          Effect.catchAll(() => Effect.succeed(""))
-        )
+        const rawContent = yield* readFileStringSafe(fs, filePath)
 
         if (rawContent) {
           const content = truncateContent(rawContent, filename)

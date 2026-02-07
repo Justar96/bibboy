@@ -55,17 +55,37 @@ interface BraveSearchResult {
   age?: string
 }
 
-interface BraveSearchResponse {
-  web?: {
-    results?: BraveSearchResult[]
-  }
+type JsonRecord = Record<string, unknown>
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
-function isBraveSearchResponse(data: unknown): data is BraveSearchResponse {
-  if (!data || typeof data !== "object") return false
-  const obj = data as { web?: unknown }
-  if (obj.web !== undefined && typeof obj.web !== "object") return false
-  return true
+function getStringField(record: JsonRecord, key: string): string | null {
+  const value = record[key]
+  return typeof value === "string" ? value : null
+}
+
+function parseBraveSearchResponse(data: unknown): BraveSearchResult[] | null {
+  if (!isRecord(data)) return null
+
+  const web = data.web
+  if (web !== undefined && !isRecord(web)) return null
+
+  const rawResults = isRecord(web) && Array.isArray(web.results) ? web.results : []
+
+  const results: BraveSearchResult[] = []
+  for (const entry of rawResults) {
+    if (!isRecord(entry)) continue
+    results.push({
+      title: getStringField(entry, "title") ?? undefined,
+      url: getStringField(entry, "url") ?? undefined,
+      description: getStringField(entry, "description") ?? undefined,
+      age: getStringField(entry, "age") ?? undefined,
+    })
+  }
+
+  return results
 }
 
 /**
@@ -123,17 +143,17 @@ async function runBraveSearch(params: {
       }
 
       const raw: unknown = await res.json()
-      if (!isBraveSearchResponse(raw)) {
+      const parsedResults = parseBraveSearchResponse(raw)
+      if (!parsedResults) {
         throw new Error("Unexpected Brave Search API response shape")
       }
-      return raw
+      return parsedResults
     } finally {
       cleanup()
     }
   }, { attempts: 3 })
 
-  const rawResults = Array.isArray(data.web?.results) ? (data.web?.results ?? []) : []
-  const results = rawResults.map((entry) => ({
+  const results = data.map((entry) => ({
     title: entry.title ?? "",
     url: entry.url ?? "",
     description: entry.description ?? "",
@@ -155,21 +175,32 @@ async function runPerplexitySearch(params: {
 }): Promise<{ results: SearchResultItem[]; tookMs: number; answer?: string }> {
   const start = Date.now()
 
-  interface PerplexityResponse {
-    choices?: Array<{
-      message?: {
-        content?: string
-      }
-    }>
-    citations?: string[]
+  interface ParsedPerplexityResponse {
+    answer: string
+    citations: string[]
   }
 
-  function isPerplexityResponse(data: unknown): data is PerplexityResponse {
-    if (!data || typeof data !== "object") return false
-    const obj = data as { choices?: unknown; citations?: unknown }
-    if (obj.choices !== undefined && !Array.isArray(obj.choices)) return false
-    if (obj.citations !== undefined && !Array.isArray(obj.citations)) return false
-    return true
+  function parsePerplexityResponse(data: unknown): ParsedPerplexityResponse | null {
+    if (!isRecord(data)) return null
+
+    if (data.choices !== undefined && !Array.isArray(data.choices)) {
+      return null
+    }
+    if (data.citations !== undefined && !Array.isArray(data.citations)) {
+      return null
+    }
+
+    const choices = Array.isArray(data.choices) ? data.choices : []
+    const firstChoice = choices[0]
+    let answer = ""
+    if (isRecord(firstChoice) && isRecord(firstChoice.message)) {
+      answer = getStringField(firstChoice.message, "content") ?? ""
+    }
+
+    const citationsRaw = Array.isArray(data.citations) ? data.citations : []
+    const citations = citationsRaw.filter((citation): citation is string => typeof citation === "string")
+
+    return { answer, citations }
   }
 
   const data = await withRetry(async () => {
@@ -200,16 +231,16 @@ async function runPerplexitySearch(params: {
       }
 
       const raw: unknown = await res.json()
-      if (!isPerplexityResponse(raw)) {
+      const parsed = parsePerplexityResponse(raw)
+      if (!parsed) {
         throw new Error("Unexpected Perplexity API response shape")
       }
-      return raw
+      return parsed
     } finally {
       cleanup()
     }
   }, { attempts: 3 })
-  const answer = data.choices?.[0]?.message?.content ?? ""
-  const citations = data.citations ?? []
+  const { answer, citations } = data
 
   // Convert citations to search result format
   const results: SearchResultItem[] = citations.slice(0, params.count).map((citation, i) => ({
@@ -220,6 +251,23 @@ async function runPerplexitySearch(params: {
   }))
 
   return { results, tookMs: Date.now() - start, answer }
+}
+
+function parseSearchProvider(
+  value: string | undefined,
+  fallback: SearchProvider
+): SearchProvider {
+  if (value === "brave" || value === "perplexity") {
+    return value
+  }
+  return fallback
+}
+
+function parseFreshnessFilter(value: string | undefined): FreshnessFilter | undefined {
+  if (value === "pd" || value === "pw" || value === "pm" || value === "py") {
+    return value
+  }
+  return undefined
 }
 
 /**
@@ -245,6 +293,7 @@ async function runWebSearch(params: {
   }
 
   let searchResult: { results: SearchResultItem[]; tookMs: number; answer?: string }
+  let providerUsed: SearchProvider | null = null
 
   if (params.provider === "perplexity" && params.perplexityApiKey) {
     searchResult = await runPerplexitySearch({
@@ -253,6 +302,17 @@ async function runWebSearch(params: {
       apiKey: params.perplexityApiKey,
       timeoutMs: params.timeoutMs,
     })
+    providerUsed = "perplexity"
+  } else if (params.provider === "brave" && params.braveApiKey) {
+    searchResult = await runBraveSearch({
+      query: params.query,
+      count: params.count,
+      apiKey: params.braveApiKey,
+      timeoutMs: params.timeoutMs,
+      country: params.country,
+      freshness: params.freshness,
+    })
+    providerUsed = "brave"
   } else if (params.braveApiKey) {
     searchResult = await runBraveSearch({
       query: params.query,
@@ -262,13 +322,22 @@ async function runWebSearch(params: {
       country: params.country,
       freshness: params.freshness,
     })
+    providerUsed = "brave"
+  } else if (params.perplexityApiKey) {
+    searchResult = await runPerplexitySearch({
+      query: params.query,
+      count: params.count,
+      apiKey: params.perplexityApiKey,
+      timeoutMs: params.timeoutMs,
+    })
+    providerUsed = "perplexity"
   } else {
     throw new Error("No search API key configured")
   }
 
   const payload: WebSearchResult = {
     query: params.query,
-    provider: params.provider,
+    provider: providerUsed,
     count: searchResult.results.length,
     tookMs: searchResult.tookMs,
     results: searchResult.results,
@@ -346,9 +415,9 @@ export function createWebSearchTool(): AgentTool {
         const count =
           readNumberParam(args, "count", { integer: true, min: 1, max: MAX_SEARCH_COUNT }) ??
           DEFAULT_SEARCH_COUNT
-        const provider = (readStringParam(args, "provider") as SearchProvider) || defaultProvider
+        const provider = parseSearchProvider(readStringParam(args, "provider") || undefined, defaultProvider)
         const country = readStringParam(args, "country") || undefined
-        const freshness = (readStringParam(args, "freshness") as FreshnessFilter) || undefined
+        const freshness = parseFreshnessFilter(readStringParam(args, "freshness") || undefined)
 
         const result = await runWebSearch({
           query,

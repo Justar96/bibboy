@@ -1,4 +1,4 @@
-import { Effect, Stream, Duration, pipe } from "effect"
+import { Effect, Stream, Duration, pipe, Schema } from "effect"
 import type { AgentStreamEvent } from "@bibboy/shared"
 
 // ============================================================================
@@ -63,28 +63,51 @@ interface GeminiRequestBody {
   generationConfig?: GeminiGenerationConfig
 }
 
-/** A candidate in the Gemini response */
-interface GeminiCandidate {
-  content?: {
-    parts: GeminiPart[]
-    role: string
-  }
-  finishReason?: string
-  index?: number
-}
+const UnknownRecordSchema = Schema.Record({
+  key: Schema.String,
+  value: Schema.Unknown,
+})
 
-/** Gemini usage metadata */
-interface GeminiUsageMetadata {
-  promptTokenCount: number
-  candidatesTokenCount: number
-  totalTokenCount: number
-}
+const GeminiFunctionCallSchema = Schema.Struct({
+  name: Schema.String,
+  args: Schema.optional(UnknownRecordSchema),
+})
 
-/** Full Gemini generate response */
-interface GeminiGenerateResponse {
-  candidates: GeminiCandidate[]
-  usageMetadata?: GeminiUsageMetadata
-}
+const GeminiPartSchema = Schema.Struct({
+  text: Schema.optional(Schema.String),
+  functionCall: Schema.optional(GeminiFunctionCallSchema),
+  functionResponse: Schema.optional(
+    Schema.Struct({
+      name: Schema.String,
+      response: Schema.Unknown,
+    })
+  ),
+  thoughtSignature: Schema.optional(Schema.String),
+})
+
+const GeminiCandidateSchema = Schema.Struct({
+  content: Schema.optional(
+    Schema.Struct({
+      parts: Schema.Array(GeminiPartSchema),
+      role: Schema.optional(Schema.String),
+    })
+  ),
+  finishReason: Schema.optional(Schema.String),
+  index: Schema.optional(Schema.Number),
+})
+
+const GeminiUsageMetadataSchema = Schema.Struct({
+  promptTokenCount: Schema.Number,
+  candidatesTokenCount: Schema.Number,
+  totalTokenCount: Schema.Number,
+})
+
+const GeminiGenerateResponseSchema = Schema.Struct({
+  candidates: Schema.Array(GeminiCandidateSchema),
+  usageMetadata: Schema.optional(GeminiUsageMetadataSchema),
+})
+
+type GeminiGenerateResponse = Schema.Schema.Type<typeof GeminiGenerateResponseSchema>
 
 // ============================================================================
 // Public Request Interface
@@ -132,14 +155,15 @@ function toError(error: unknown): Error {
   return new Error(String(error))
 }
 
-/** Validate that parsed JSON has the expected Gemini response shape */
-function isGeminiGenerateResponse(data: unknown): data is GeminiGenerateResponse {
-  return (
-    typeof data === "object" &&
-    data !== null &&
-    "candidates" in data &&
-    Array.isArray((data as { candidates: unknown }).candidates)
-  )
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+const decodeGeminiGenerateResponse = Schema.decodeUnknownEither(GeminiGenerateResponseSchema)
+
+function parseGeminiGenerateResponse(raw: unknown): GeminiGenerateResponse | null {
+  const decoded = decodeGeminiGenerateResponse(raw)
+  return decoded._tag === "Right" ? decoded.right : null
 }
 
 // ============================================================================
@@ -235,18 +259,18 @@ function sanitizeSchema(schema: Record<string, unknown>): Record<string, unknown
   for (const [key, value] of Object.entries(schema)) {
     if (UNSUPPORTED_KEYS.has(key)) continue
 
-    if (key === "properties" && typeof value === "object" && value !== null) {
+    if (key === "properties" && isRecord(value)) {
       const props: Record<string, unknown> = {}
-      for (const [propKey, propVal] of Object.entries(value as Record<string, unknown>)) {
-        if (typeof propVal === "object" && propVal !== null) {
-          props[propKey] = sanitizeSchema(propVal as Record<string, unknown>)
+      for (const [propKey, propVal] of Object.entries(value)) {
+        if (isRecord(propVal)) {
+          props[propKey] = sanitizeSchema(propVal)
         } else {
           props[propKey] = propVal
         }
       }
       result[key] = props
-    } else if (key === "items" && typeof value === "object" && value !== null) {
-      result[key] = sanitizeSchema(value as Record<string, unknown>)
+    } else if (key === "items" && isRecord(value)) {
+      result[key] = sanitizeSchema(value)
     } else {
       result[key] = value
     }
@@ -274,7 +298,7 @@ function parseGeminiResponse(data: GeminiGenerateResponse): GeminiResponse {
     if (part.functionCall) {
       functionCalls.push({
         name: part.functionCall.name,
-        args: part.functionCall.args ?? {},
+        args: part.functionCall.args ? { ...part.functionCall.args } : {},
         ...(part.thoughtSignature && { thoughtSignature: part.thoughtSignature }),
       })
     }
@@ -333,11 +357,12 @@ export const createGeminiResponse = (
       catch: (error) => new Error(`Failed to parse Gemini response: ${String(error)}`),
     })
 
-    if (!isGeminiGenerateResponse(raw)) {
+    const parsed = parseGeminiGenerateResponse(raw)
+    if (!parsed) {
       return yield* Effect.fail(new Error("Unexpected Gemini response shape"))
     }
 
-    return parseGeminiResponse(raw)
+    return parseGeminiResponse(parsed)
   })
 
 // ============================================================================
@@ -405,8 +430,9 @@ export const streamGemini = (
 
                 try {
                   const parsed: unknown = JSON.parse(payload)
-                  if (!isGeminiGenerateResponse(parsed)) continue
-                  const candidate = parsed.candidates[0]
+                  const decoded = parseGeminiGenerateResponse(parsed)
+                  if (!decoded) continue
+                  const candidate = decoded.candidates[0]
                   if (!candidate) continue
 
                   for (const part of candidate.content?.parts ?? []) {
@@ -426,7 +452,9 @@ export const streamGemini = (
                         type: "tool_start",
                         toolCallId: callId,
                         toolName: part.functionCall.name,
-                        arguments: part.functionCall.args ?? {},
+                        arguments: part.functionCall.args
+                          ? { ...part.functionCall.args }
+                          : {},
                         ...(part.thoughtSignature && { thoughtSignature: part.thoughtSignature }),
                       })
                     }

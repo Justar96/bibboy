@@ -1,4 +1,4 @@
-import { Effect, Stream, pipe, Schedule, Duration, Ref } from "effect"
+import { Effect, Stream, pipe } from "effect"
 import type {
   AgentRequest,
   AgentResponse,
@@ -10,51 +10,44 @@ import type {
   AgentStreamEvent,
   AgentServiceError,
 } from "@bibboy/shared"
+import { AgentError } from "@bibboy/shared"
 import {
-  AgentError,
-  ToolError,
-  ApiKeyNotConfiguredError,
-  RateLimitExceededError,
-  ContextOverflowError,
-  ApiTimeoutError,
-  ServiceOverloadedError,
-  AuthenticationError,
-  BillingError,
-} from "@bibboy/shared"
-import {
-  createGeminiResponse,
-  streamGemini,
-  chatMessagesToGeminiContents,
   GEMINI_DEFAULT_MODEL,
-  type GeminiContent,
-  type GeminiFunctionDeclaration,
 } from "@bibboy/agent-runtime"
 import {
   createToolRegistry,
   type ToolRegistry,
-  type FunctionToolDefinition,
   type CanvasToolRuntime,
+  type ToolExecutionContext,
+  createToolExecutionMetrics,
 } from "../tools"
 import type { SoulToolRuntime } from "./SoulStateService"
 import {
   agentConfig,
   initializeAgentConfig,
+  getThinkingBudget,
   type ResolvedAgentConfig,
 } from "../agents/AgentConfig"
-import { buildAgentSystemPrompt } from "../agents/SystemPromptBuilder"
-import { loadContextFiles, initializeWorkspace, getWorkspaceDir } from "../workspace"
-import {
-  isContextOverflowError,
-  isRateLimitError,
-  isAuthError,
-  isBillingError,
-  isTimeoutError,
-  isOverloadedError,
-} from "../agents/agent-errors"
-import { getGlobalConfig, getGeminiApiKeyValue, hasGeminiApiKey } from "../config"
-import { extractAgentErrorMessage } from "./error-utils"
+import { getGlobalConfig } from "../config"
 import { sanitizeAssistantOutput } from "../text"
-import { compactToolResult } from "../tools/tool-result-store"
+import {
+  addTokenUsage,
+  buildFinalSynthesisInstruction,
+  buildGeminiInput,
+  buildToolBudgetSystemInstruction,
+  generateMessageId,
+  streamToAsyncGenerator,
+} from "./agent-service-helpers"
+import {
+  callGeminiWithRetry,
+  getApiKey,
+} from "./agent-service-gemini"
+import {
+  compactFunctionResponses,
+  executeTools,
+  toGeminiFunctionDeclarations,
+} from "./agent-service-tool-execution"
+import { orchestrateAgentStreamIterations } from "./agent-service-stream-orchestrator"
 
 // Load config and initialize agent config on module load
 const appConfig = getGlobalConfig()
@@ -64,57 +57,17 @@ initializeAgentConfig()
 // Constants
 // ============================================================================
 
-const MAX_TOOL_ITERATIONS = 10
-const DEFAULT_TIMEOUT_MS = 120_000
-const DEFAULT_HISTORY_TURN_LIMIT = 15
+const MAX_TOOL_ITERATIONS = 30
+const SOFT_LIMIT_ITERATIONS = 20
+const MAX_OVERFLOW_COMPACTION_ATTEMPTS = 3
+const DEFAULT_TOOL_TIMEOUT_MS = 30_000
 
 // ============================================================================
-// Helper Functions
+// Agent Resolution
 // ============================================================================
-
-function generateMessageId(): string {
-  return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-}
-
-/**
- * Limit conversation history to the last N user turns (and their associated
- * assistant responses). Keeps complete exchanges intact rather than cutting
- * mid-conversation. Preserves system messages (e.g. compaction summaries)
- * which are always kept at the front. Adapted from OpenClaw's limitHistoryTurns.
- */
-function limitHistoryTurns(
-  messages: readonly ChatMessage[],
-  limit: number = DEFAULT_HISTORY_TURN_LIMIT
-): ChatMessage[] {
-  if (limit <= 0 || messages.length === 0) {
-    return [...messages]
-  }
-
-  // Separate system messages (summaries) from conversational messages
-  const systemMessages = messages.filter((m) => m.role === "system")
-  const conversationMessages = messages.filter((m) => m.role !== "system")
-
-  let userCount = 0
-  let cutIndex = 0
-
-  for (let i = conversationMessages.length - 1; i >= 0; i--) {
-    if (conversationMessages[i].role === "user") {
-      userCount++
-      if (userCount > limit) {
-        cutIndex = i + 1
-        break
-      }
-    }
-  }
-
-  const trimmedConversation = conversationMessages.slice(cutIndex)
-
-  // Prepend system messages (summaries) before conversation
-  return [...systemMessages, ...trimmedConversation] as ChatMessage[]
-}
 
 function resolveAgentFromRequest(request: AgentRequest): ResolvedAgentConfig {
-  const agentId = (request as { agentId?: string }).agentId
+  const { agentId } = request
   if (agentId) {
     const resolved = agentConfig.getAgent(agentId)
     if (resolved) return resolved
@@ -172,229 +125,6 @@ function resolveAgentFromRequest(request: AgentRequest): ResolvedAgentConfig {
 
 // Removed: crude char-budget approach replaced by ConversationMemory token management
 
-/**
- * Convert function tool definitions to Gemini function declarations.
- */
-function toGeminiFunctionDeclarations(
-  tools: FunctionToolDefinition[]
-): GeminiFunctionDeclaration[] {
-  return tools.map((tool) => ({
-    name: tool.name,
-    description: tool.description,
-    parameters: tool.parameters as unknown as Record<string, unknown>,
-  }))
-}
-
-async function buildGeminiInput(
-  agent: ResolvedAgentConfig,
-  history: readonly ChatMessage[],
-  userMessage: string,
-  toolRegistry: ToolRegistry,
-  _hasTools: boolean,
-  characterState?: CharacterState
-): Promise<{ systemInstruction: string; contents: GeminiContent[] }> {
-  await initializeWorkspace(agent.id)
-  const contextFiles = await loadContextFiles(agent.id)
-  const workspaceDir = getWorkspaceDir(agent.id)
-
-  const systemPrompt = buildAgentSystemPrompt({
-    agentConfig: agent,
-    toolRegistry,
-    workspaceDir,
-    contextFiles,
-    runtimeInfo: {
-      agentId: agent.id,
-      model: agent.model.primary,
-    },
-    characterState,
-  })
-
-  // Use turn-based limiting (keeps complete exchanges + system summaries)
-  const historyLimited = limitHistoryTurns(history)
-  const allMessages = [
-    ...historyLimited,
-    { role: "user" as const, content: userMessage },
-  ]
-
-  const contents = chatMessagesToGeminiContents(allMessages)
-
-  // Ensure starts with user turn (Gemini requirement)
-  if (contents.length > 0 && contents[0].role === "model") {
-    contents.unshift({ role: "user", parts: [{ text: "(conversation context)" }] })
-  }
-
-  return { systemInstruction: systemPrompt, contents }
-}
-
-// ============================================================================
-// Error Classification
-// ============================================================================
-
-function classifyToTaggedError(error: unknown, model: string): AgentServiceError {
-  const message = extractAgentErrorMessage(error)
-
-  if (isContextOverflowError(message)) return new ContextOverflowError({ model })
-  if (isRateLimitError(message)) return new RateLimitExceededError({ retryAfterMs: 30000 })
-  if (isAuthError(message)) return new AuthenticationError({ reason: message })
-  if (isBillingError(message)) return new BillingError({ reason: message })
-  if (isTimeoutError(message)) return new ApiTimeoutError({ timeoutMs: DEFAULT_TIMEOUT_MS })
-  if (isOverloadedError(message)) return new ServiceOverloadedError({ retryAfterMs: 10000 })
-
-  return new AgentError({ reason: message })
-}
-
-function isRetryableError(error: AgentServiceError): boolean {
-  return (
-    error._tag === "RateLimitExceededError" ||
-    error._tag === "ApiTimeoutError" ||
-    error._tag === "ServiceOverloadedError" ||
-    error._tag === "AgentError"
-  )
-}
-
-// ============================================================================
-// Retry Schedule
-// ============================================================================
-
-const createRetrySchedule = () =>
-  pipe(
-    Schedule.exponential(Duration.seconds(2), 2),
-    Schedule.jittered,
-    Schedule.intersect(Schedule.recurs(3)),
-    Schedule.whileInput((error: AgentServiceError) => isRetryableError(error))
-  )
-
-// ============================================================================
-// Gemini API Effects
-// ============================================================================
-
-const getApiKey = Effect.gen(function* () {
-  if (!hasGeminiApiKey(appConfig)) {
-    return yield* Effect.fail(new ApiKeyNotConfiguredError({ provider: "gemini" }))
-  }
-  return getGeminiApiKeyValue(appConfig) as string
-})
-
-const callGemini = (
-  contents: GeminiContent[],
-  systemInstruction: string,
-  tools: GeminiFunctionDeclaration[],
-  apiKey: string,
-  model: string
-): Effect.Effect<
-  {
-    text: string
-    functionCalls: Array<{ name: string; args: Record<string, unknown>; thoughtSignature?: string }>
-    usage?: { promptTokens: number; completionTokens: number; totalTokens: number }
-  },
-  AgentServiceError
-> =>
-  pipe(
-    createGeminiResponse({
-      apiKey,
-      model,
-      contents,
-      systemInstruction,
-      tools: tools.length > 0 ? tools : undefined,
-      toolConfig: tools.length > 0 ? "auto" : "none",
-      maxOutputTokens: 8192,
-    }),
-    Effect.catchAll((error) => Effect.fail(classifyToTaggedError(error, model))),
-    Effect.timeout(Duration.millis(DEFAULT_TIMEOUT_MS)),
-    Effect.catchTag("TimeoutException", () =>
-      Effect.fail(new ApiTimeoutError({ timeoutMs: DEFAULT_TIMEOUT_MS }))
-    )
-  )
-
-const callGeminiWithRetry = (
-  contents: GeminiContent[],
-  systemInstruction: string,
-  tools: GeminiFunctionDeclaration[],
-  apiKey: string,
-  model: string,
-  fallbackModels: string[]
-): Effect.Effect<
-  {
-    text: string
-    functionCalls: Array<{ name: string; args: Record<string, unknown>; thoughtSignature?: string }>
-    usage?: { promptTokens: number; completionTokens: number; totalTokens: number }
-    modelUsed: string
-  },
-  AgentServiceError
-> =>
-  Effect.gen(function* () {
-    const allModels = [model, ...fallbackModels]
-    const modelIndexRef = yield* Ref.make(0)
-
-    const tryWithModel = Effect.gen(function* () {
-      const modelIndex = yield* Ref.get(modelIndexRef)
-      const currentModel = allModels[modelIndex] ?? model
-
-      return yield* pipe(
-        callGemini(contents, systemInstruction, tools, apiKey, currentModel),
-        Effect.map((response) => ({ ...response, modelUsed: currentModel })),
-        Effect.catchTag("ContextOverflowError", (error) =>
-          Effect.gen(function* () {
-            if (modelIndex < allModels.length - 1) {
-              yield* Ref.update(modelIndexRef, (i) => i + 1)
-            }
-            return yield* Effect.fail(error as AgentServiceError)
-          })
-        )
-      )
-    })
-
-    const retrySchedule = createRetrySchedule()
-    return yield* pipe(tryWithModel, Effect.retry(retrySchedule))
-  })
-
-// ============================================================================
-// Tool Execution
-// ============================================================================
-
-const executeTool = (
-  toolRegistry: ToolRegistry,
-  tc: { id: string; name: string; args: Record<string, unknown> }
-): Effect.Effect<ToolExecutionResult, never> =>
-  Effect.gen(function* () {
-    const tool = toolRegistry.get(tc.name)
-
-    if (!tool) {
-      return {
-        toolCallId: tc.id,
-        content: [{ type: "text" as const, text: JSON.stringify({ error: `Unknown tool: ${tc.name}` }) }],
-        error: `Unknown tool: ${tc.name}`,
-      }
-    }
-
-    const result = yield* Effect.tryPromise({
-      try: async () => tool.execute(tc.id, tc.args),
-      catch: (error) =>
-        new ToolError({
-          toolName: tc.name,
-          reason: error instanceof Error ? error.message : "Unknown error",
-        }),
-    }).pipe(
-      Effect.catchAll((toolError) =>
-        Effect.succeed({
-          toolCallId: tc.id,
-          content: [{ type: "text" as const, text: JSON.stringify({ error: toolError.reason }) }],
-          error: toolError.reason,
-        })
-      )
-    )
-
-    return { ...result, toolCallId: tc.id }
-  })
-
-const executeTools = (
-  toolRegistry: ToolRegistry,
-  toolCalls: Array<{ id: string; name: string; args: Record<string, unknown> }>
-): Effect.Effect<ToolExecutionResult[], never> =>
-  Effect.forEach(toolCalls, (tc) => executeTool(toolRegistry, tc), {
-    concurrency: "unbounded",
-  })
-
 // ============================================================================
 // Non-Streaming Agent
 // ============================================================================
@@ -406,33 +136,116 @@ const runAgent = (
   characterState?: CharacterState
 ): Effect.Effect<AgentResponse, AgentServiceError> =>
   Effect.gen(function* () {
-    const apiKey = yield* getApiKey
+    const apiKey = yield* getApiKey(appConfig)
 
     const history = [...(request.history ?? [])]
     const enableTools = request.enableTools !== false
     const model = agentConfigResolved.model.primary
     const fallbackModels = agentConfigResolved.model.fallbacks ?? []
+    const thinkingBudget = getThinkingBudget(agentConfigResolved.thinkingLevel)
 
     const { systemInstruction, contents: initialContents } = yield* Effect.tryPromise({
       try: () =>
-        buildGeminiInput(agentConfigResolved, history, request.message, toolRegistry, enableTools, characterState),
+        buildGeminiInput(
+          agentConfigResolved,
+          history,
+          request.message,
+          toolRegistry,
+          characterState
+        ),
       catch: (error) => new AgentError({ reason: `Failed to build messages: ${error}` }),
     })
-
-    const toolDefs = enableTools ? toGeminiFunctionDeclarations(toolRegistry.getDefinitions()) : []
 
     const allToolCalls: ToolCall[] = []
     const allToolResults: ToolExecutionResult[] = []
     let finalContent = ""
     const currentContents = [...initialContents]
 
+    // Aggregate token usage across iterations
+    const accumulatedUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 }
+
+    // Tool execution context with abort signal + metrics
+    const metrics = createToolExecutionMetrics()
+    const toolCtx: ToolExecutionContext = { timeoutMs: DEFAULT_TOOL_TIMEOUT_MS, metrics }
+
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
-      const apiResult = yield* pipe(
-        callGeminiWithRetry(currentContents, systemInstruction, toolDefs, apiKey, model, fallbackModels),
-        Effect.catchTag("ContextOverflowError", () => Effect.succeed(null))
-      )
+      // Re-fetch tool defs each iteration (may grow via request_tools)
+      const currentToolDefs = enableTools
+        ? toGeminiFunctionDeclarations(toolRegistry.getDefinitions())
+        : []
+
+      // After soft limit, nudge the model to wrap up with usage context
+      const remaining = MAX_TOOL_ITERATIONS - i
+      let systemWithBudget = systemInstruction
+      if (i >= SOFT_LIMIT_ITERATIONS) {
+        systemWithBudget = buildToolBudgetSystemInstruction(
+          systemInstruction,
+          remaining,
+          metrics.getSummary()
+        )
+      }
+
+      // Context overflow recovery: retry with compaction (OpenClaw pattern)
+      let apiResult: {
+        text: string
+        functionCalls: Array<{ name: string; args: Record<string, unknown>; thoughtSignature?: string }>
+        usage?: { promptTokens: number; completionTokens: number; totalTokens: number }
+        modelUsed: string
+      } | null = null
+      let overflowAttempts = 0
+
+      while (overflowAttempts <= MAX_OVERFLOW_COMPACTION_ATTEMPTS) {
+        const result = yield* pipe(
+          callGeminiWithRetry(currentContents, systemWithBudget, currentToolDefs, apiKey, model, fallbackModels, thinkingBudget),
+          Effect.map((r) => ({ success: true as const, value: r })),
+          Effect.catchTag("ContextOverflowError", () =>
+            Effect.succeed({ success: false as const, value: null })
+          )
+        )
+
+        if (result.success) {
+          apiResult = result.value
+          break
+        }
+
+        overflowAttempts++
+        if (overflowAttempts > MAX_OVERFLOW_COMPACTION_ATTEMPTS) break
+
+        // Smarter auto-compact: prefer trimming text turns over tool result turns
+        // This preserves tool execution context while reducing conversation bulk
+        const trimCount = Math.min(4, Math.floor(currentContents.length / 3))
+        if (trimCount > 0 && currentContents.length > 2) {
+          // Find removable turns (prefer text-only turns over function response turns)
+          let removed = 0
+          for (let idx = 0; idx < currentContents.length && removed < trimCount; idx++) {
+            const turn = currentContents[idx]
+            const hasFunctionParts = turn.parts.some(
+              (p) => p.functionCall || p.functionResponse
+            )
+            if (!hasFunctionParts) {
+              currentContents.splice(idx, 1)
+              removed++
+              idx-- // Re-check same index after splice
+            }
+          }
+          // If we couldn't remove enough text turns, trim from the start
+          if (removed < trimCount) {
+            const remaining = trimCount - removed
+            currentContents.splice(0, Math.min(remaining, currentContents.length - 2))
+          }
+          // Ensure starts with user turn after trimming
+          if (currentContents.length > 0 && currentContents[0].role === "model") {
+            currentContents.unshift({ role: "user", parts: [{ text: "(earlier conversation compacted)" }] })
+          }
+        } else {
+          break
+        }
+      }
 
       if (!apiResult) break
+
+      // Track usage
+      addTokenUsage(accumulatedUsage, apiResult.usage)
 
       if (apiResult.functionCalls.length > 0) {
         // Add model function call response to conversation
@@ -450,7 +263,11 @@ const runAgent = (
           args: fc.args,
         }))
 
-        const results = yield* executeTools(toolRegistry, toolCallsWithIds)
+        // Pass iteration context to tool wrappers
+        const results = yield* executeTools(toolRegistry, toolCallsWithIds, {
+          ...toolCtx,
+          iteration: i,
+        })
 
         for (let j = 0; j < toolCallsWithIds.length; j++) {
           allToolCalls.push({ id: toolCallsWithIds[j].id, name: toolCallsWithIds[j].name, arguments: toolCallsWithIds[j].args })
@@ -460,24 +277,8 @@ const runAgent = (
         // Add function responses as user turn (Gemini format)
         // Compact results to keep context small — full content saved to workspace files
         const compactedParts = yield* Effect.tryPromise({
-          try: async () => {
-            const parts = []
-            for (let k = 0; k < toolCallsWithIds.length; k++) {
-              const rawText = results[k].content[0]?.text ?? ""
-              const compacted = await compactToolResult(
-                toolCallsWithIds[k].name,
-                rawText,
-                agentConfigResolved.id
-              )
-              parts.push({
-                functionResponse: {
-                  name: toolCallsWithIds[k].name,
-                  response: { result: compacted },
-                },
-              })
-            }
-            return parts
-          },
+          try: () =>
+            compactFunctionResponses(toolCallsWithIds, results, agentConfigResolved.id, i),
           catch: () => new AgentError({ reason: "Failed to compact tool results" }),
         })
 
@@ -496,11 +297,20 @@ const runAgent = (
     // so the model can synthesize a response from the gathered tool results
     if (!finalContent && allToolCalls.length > 0) {
       const finalResult = yield* pipe(
-        callGeminiWithRetry(currentContents, systemInstruction, [], apiKey, model, fallbackModels),
+        callGeminiWithRetry(
+          currentContents,
+          buildFinalSynthesisInstruction(systemInstruction, metrics.getSummary()),
+          [],
+          apiKey,
+          model,
+          fallbackModels,
+          thinkingBudget
+        ),
         Effect.catchTag("ContextOverflowError", () => Effect.succeed(null))
       )
       if (finalResult) {
         finalContent = finalResult.text
+        addTokenUsage(accumulatedUsage, finalResult.usage)
       }
     }
 
@@ -531,213 +341,40 @@ const runAgentStream = (
 ): Stream.Stream<AgentStreamEvent, AgentServiceError> =>
   Stream.unwrap(
     Effect.gen(function* () {
-      const apiKey = yield* getApiKey
+      const apiKey = yield* getApiKey(appConfig)
 
       const history = [...(request.history ?? [])]
       const enableTools = request.enableTools !== false
       const model = agentConfigResolved.model.primary
+      const thinkingBudget = getThinkingBudget(agentConfigResolved.thinkingLevel)
 
       const { systemInstruction, contents: initialContents } = yield* Effect.tryPromise({
         try: () =>
-          buildGeminiInput(agentConfigResolved, history, request.message, toolRegistry, enableTools, characterState),
+          buildGeminiInput(
+            agentConfigResolved,
+            history,
+            request.message,
+            toolRegistry,
+            characterState
+          ),
         catch: (error) => new AgentError({ reason: `Failed to build messages: ${error}` }),
       })
-      const toolDefs = enableTools ? toGeminiFunctionDeclarations(toolRegistry.getDefinitions()) : []
 
-      const processIteration = (
-        currentContents: GeminiContent[],
-        iteration: number,
-        allToolCalls: ToolCall[],
-        fullContent: string
-      ): Stream.Stream<AgentStreamEvent, AgentServiceError> => {
-        if (iteration >= MAX_TOOL_ITERATIONS) {
-          // All iterations consumed by tool calls — make a final text-only call
-          // so the model can synthesize a response from the gathered tool results
-          if (!fullContent && allToolCalls.length > 0) {
-            let finalIterContent = ""
-            return pipe(
-              streamGemini({
-                apiKey,
-                model,
-                contents: currentContents,
-                systemInstruction,
-                maxOutputTokens: 8192,
-              }).pipe(Stream.mapError((error) => classifyToTaggedError(error, model))),
-              Stream.catchTag("ContextOverflowError", () => Stream.empty),
-              Stream.mapConcat((event): AgentStreamEvent[] => {
-                if (event.type === "text_delta") {
-                  finalIterContent += event.delta
-                  return [{ type: "text_delta", delta: event.delta }]
-                }
-                // Skip done and tool events from raw stream
-                return []
-              }),
-              Stream.concat(
-                Stream.unwrap(
-                  Effect.sync(() =>
-                    Stream.succeed<AgentStreamEvent>({
-                      type: "done",
-                      message: {
-                        id: generateMessageId(),
-                        role: "assistant",
-                        content: sanitizeAssistantOutput(fullContent + finalIterContent),
-                        timestamp: Date.now(),
-                      },
-                      toolCalls: allToolCalls.length > 0 ? allToolCalls : undefined,
-                    })
-                  )
-                )
-              )
-            )
-          }
-
-          return Stream.succeed<AgentStreamEvent>({
-            type: "done",
-            message: {
-              id: generateMessageId(),
-              role: "assistant",
-              content: fullContent,
-              timestamp: Date.now(),
-            },
-            toolCalls: allToolCalls.length > 0 ? allToolCalls : undefined,
-          })
-        }
-
-        let iterationContent = ""
-        const pendingFunctionCalls: Array<{ id: string; name: string; args: Record<string, unknown>; thoughtSignature?: string }> = []
-
-        return pipe(
-          streamGemini({
-            apiKey,
-            model,
-            contents: currentContents,
-            systemInstruction,
-            tools: toolDefs.length > 0 ? toolDefs : undefined,
-            toolConfig: toolDefs.length > 0 ? "auto" : "none",
-            maxOutputTokens: 8192,
-          }).pipe(Stream.mapError((error) => classifyToTaggedError(error, model))),
-          Stream.catchTag("ContextOverflowError", () => Stream.empty),
-          Stream.mapConcat((event): AgentStreamEvent[] => {
-            const events: AgentStreamEvent[] = []
-
-            if (event.type === "text_delta") {
-              iterationContent += event.delta
-              events.push({ type: "text_delta", delta: event.delta })
-            } else if (event.type === "tool_start") {
-              pendingFunctionCalls.push({
-                id: event.toolCallId,
-                name: event.toolName,
-                args: event.arguments,
-                ...(event.thoughtSignature && { thoughtSignature: event.thoughtSignature }),
-              })
-              events.push(event)
-            } else if (event.type === "error") {
-              events.push(event)
-            }
-            // Skip "done" from the raw stream — we handle it ourselves
-            return events
-          }),
-          Stream.concat(
-            Stream.unwrap(
-              Effect.gen(function* () {
-                if (pendingFunctionCalls.length > 0) {
-                  const toolEvents: AgentStreamEvent[] = []
-                  const toolResults: ToolExecutionResult[] = []
-
-                  currentContents.push({
-                    role: "model" as const,
-                    parts: pendingFunctionCalls.map((fc) => ({
-                      functionCall: { name: fc.name, args: fc.args },
-                      ...(fc.thoughtSignature && { thoughtSignature: fc.thoughtSignature }),
-                    })),
-                  })
-
-                  for (const tc of pendingFunctionCalls) {
-                    const result = yield* executeTool(toolRegistry, tc)
-
-                    toolEvents.push({
-                      type: "tool_end",
-                      toolCallId: tc.id,
-                      toolName: tc.name,
-                      result,
-                    })
-
-                    toolResults.push(result)
-                    allToolCalls.push({ id: tc.id, name: tc.name, arguments: tc.args })
-                  }
-
-                  // Compact results to keep context small — full content saved to workspace files
-                  const compactedParts = yield* Effect.tryPromise({
-                    try: async () => {
-                      const parts = []
-                      for (let k = 0; k < pendingFunctionCalls.length; k++) {
-                        const rawText = toolResults[k].content[0]?.text ?? ""
-                        const compacted = await compactToolResult(
-                          pendingFunctionCalls[k].name,
-                          rawText,
-                          agentConfigResolved.id
-                        )
-                        parts.push({
-                          functionResponse: {
-                            name: pendingFunctionCalls[k].name,
-                            response: { result: compacted },
-                          },
-                        })
-                      }
-                      return parts
-                    },
-                    catch: () => new AgentError({ reason: "Failed to compact tool results" }),
-                  })
-
-                  currentContents.push({
-                    role: "user" as const,
-                    parts: compactedParts,
-                  })
-
-                  return Stream.concat(
-                    Stream.fromIterable(toolEvents),
-                    processIteration(currentContents, iteration + 1, allToolCalls, fullContent + iterationContent)
-                  ) as Stream.Stream<AgentStreamEvent, AgentServiceError>
-                }
-
-                return Stream.succeed<AgentStreamEvent>({
-                  type: "done",
-                  message: {
-                    id: generateMessageId(),
-                    role: "assistant",
-                    content: sanitizeAssistantOutput(fullContent + iterationContent),
-                    timestamp: Date.now(),
-                  },
-                  toolCalls: allToolCalls.length > 0 ? allToolCalls : undefined,
-                }) as Stream.Stream<AgentStreamEvent, AgentServiceError>
-              }) as Effect.Effect<Stream.Stream<AgentStreamEvent, AgentServiceError>>
-            )
-          )
-        )
-      }
-
-      return processIteration(initialContents, 0, [], "")
+      return orchestrateAgentStreamIterations({
+        apiKey,
+        model,
+        thinkingBudget,
+        enableTools,
+        toolRegistry,
+        initialContents,
+        systemInstruction,
+        agentId: agentConfigResolved.id,
+        maxToolIterations: MAX_TOOL_ITERATIONS,
+        softLimitIterations: SOFT_LIMIT_ITERATIONS,
+        toolTimeoutMs: DEFAULT_TOOL_TIMEOUT_MS,
+      })
     })
   )
-
-/**
- * Convert Stream to AsyncGenerator for backwards compatibility.
- */
-async function* streamToAsyncGenerator(
-  stream: Stream.Stream<AgentStreamEvent, AgentServiceError>
-): AsyncGenerator<AgentStreamEvent, void, unknown> {
-  const events = await Effect.runPromise(
-    pipe(
-      stream,
-      Stream.runCollect,
-      Effect.map((chunk) => [...chunk])
-    )
-  )
-
-  for (const event of events) {
-    yield event
-  }
-}
 
 // ============================================================================
 // AgentService Interface

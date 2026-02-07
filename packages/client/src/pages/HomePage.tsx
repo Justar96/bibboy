@@ -39,6 +39,11 @@ export function HomePage() {
       <PhaserChat
         chatAdapter={wsChat}
         connectionState={connectionState}
+        canvasBlueprint={wsChat.canvasBlueprint}
+        canvasVersion={wsChat.canvasVersion}
+        lastCanvasOp={wsChat.lastCanvasOp}
+        soulState={wsChat.soulState}
+        soulStage={wsChat.soulStage}
       />
     </Suspense>
   )

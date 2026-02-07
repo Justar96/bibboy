@@ -9,6 +9,10 @@ import {
   getWorkspaceDir,
 } from "../workspace"
 
+function normalizeMarkdownFilename(filename: string): string {
+  return filename.endsWith(".md") ? filename : `${filename}.md`
+}
+
 // ============================================================================
 // Read File Tool
 // ============================================================================
@@ -35,8 +39,7 @@ export function createReadFileTool(agentId: string): AgentTool {
         return errorResult("Missing required parameter: filename")
       }
 
-      // Ensure .md extension
-      const normalizedFilename = filename.endsWith(".md") ? filename : `${filename}.md`
+      const normalizedFilename = normalizeMarkdownFilename(filename)
 
       const file = await readWorkspaceFile(agentId, normalizedFilename)
 
@@ -78,18 +81,17 @@ export function createWriteFileTool(agentId: string): AgentTool {
     },
     execute: async (_toolCallId, args: Record<string, unknown>): Promise<ToolExecutionResult> => {
       const filename = readStringParam(args, "filename")
-      const content = readStringParam(args, "content")
+      const content = args.content
 
       if (!filename) {
         return errorResult("Missing required parameter: filename")
       }
 
-      if (content === undefined) {
+      if (typeof content !== "string") {
         return errorResult("Missing required parameter: content")
       }
 
-      // Ensure .md extension
-      const normalizedFilename = filename.endsWith(".md") ? filename : `${filename}.md`
+      const normalizedFilename = normalizeMarkdownFilename(filename)
 
       const success = await writeWorkspaceFile(agentId, normalizedFilename, content)
 

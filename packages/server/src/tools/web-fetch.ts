@@ -48,6 +48,10 @@ interface WebFetchResult {
   error?: string
 }
 
+function parseExtractMode(value: string | undefined): ExtractMode {
+  return value === "markdown" ? "markdown" : "text"
+}
+
 /**
  * Check if status is a redirect.
  */
@@ -257,7 +261,7 @@ export function createWebFetchTool(): AgentTool {
     execute: async (_toolCallId, args): Promise<ToolExecutionResult> => {
       try {
         const url = readStringParam(args, "url", { required: true })
-        const extractMode = (readStringParam(args, "extractMode") || "text") as ExtractMode
+        const extractMode = parseExtractMode(readStringParam(args, "extractMode") || undefined)
         const maxChars = readNumberParam(args, "maxChars", { integer: true, min: 100 }) ?? DEFAULT_FETCH_MAX_CHARS
 
         const result = await runWebFetch({

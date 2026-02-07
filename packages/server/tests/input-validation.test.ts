@@ -170,6 +170,32 @@ describe("validateAgentRequest", () => {
       expect(result.data.message).toBe("HelloWorld")
     }
   })
+
+  it("rejects non-boolean enableTools", () => {
+    const body = {
+      message: "Hello",
+      enableTools: "yes",
+    }
+
+    const result = validateAgentRequest(body)
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toContain("enableTools")
+    }
+  })
+
+  it("accepts explicit boolean enableTools", () => {
+    const body = {
+      message: "Hello",
+      enableTools: false,
+    }
+
+    const result = validateAgentRequest(body)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.enableTools).toBe(false)
+    }
+  })
 })
 
 describe("validateFilePath", () => {
