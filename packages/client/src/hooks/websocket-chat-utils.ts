@@ -31,17 +31,49 @@ export type JsonRecord = Record<string, unknown>
 // Constants
 // ============================================================================
 
-/** Maximum reconnection attempts before giving up (~30 seconds with backoff) */
-export const MAX_RECONNECT_ATTEMPTS = 15
+/** Maximum reconnection attempts before giving up */
+export const MAX_RECONNECT_ATTEMPTS = 20
 
-/** Initial reconnection delay in milliseconds */
-const INITIAL_RECONNECT_DELAY_MS = 2000
+/** Initial reconnection delay in milliseconds (faster initial retry) */
+const INITIAL_RECONNECT_DELAY_MS = 800
 
-/** Maximum reconnection delay in milliseconds */
-const MAX_RECONNECT_DELAY_MS = 5000
+/** Maximum reconnection delay in milliseconds (higher cap for stability) */
+const MAX_RECONNECT_DELAY_MS = 15000
 
-/** Reconnection delay multiplier for exponential backoff */
-const RECONNECT_BACKOFF_MULTIPLIER = 1.2
+/** Reconnection delay multiplier for exponential backoff (steeper curve) */
+const RECONNECT_BACKOFF_MULTIPLIER = 1.7
+
+// ============================================================================
+// Gap Detection
+// ============================================================================
+
+export interface SequenceGap {
+  expected: number
+  received: number
+  missedCount: number
+}
+
+/**
+ * Detect sequence gaps in event streams.
+ * Returns gap info if a gap exists, null otherwise.
+ */
+export function detectSequenceGap(
+  lastSeq: number | null,
+  currentSeq: number
+): SequenceGap | null {
+  if (lastSeq === null) {
+    return null
+  }
+  const expected = lastSeq + 1
+  if (currentSeq > expected) {
+    return {
+      expected,
+      received: currentSeq,
+      missedCount: currentSeq - expected,
+    }
+  }
+  return null
+}
 
 // ============================================================================
 // Helper Functions

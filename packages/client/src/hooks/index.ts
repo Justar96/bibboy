@@ -13,6 +13,23 @@ export type {
   UseWebSocketChatReturn,
 } from "./useWebSocketChat"
 
+export { useToolStream } from "./useToolStream"
+export type {
+  ToolStreamEntry,
+  ToolMessage,
+  ToolMessageContent,
+  UseToolStreamOptions,
+  UseToolStreamReturn,
+} from "./useToolStream"
+
+export { useChatQueue, isChatStopCommand, isChatResetCommand } from "./useChatQueue"
+export type {
+  ChatQueueItem,
+  ChatAttachment,
+  UseChatQueueOptions,
+  UseChatQueueReturn,
+} from "./useChatQueue"
+
 export { useChatMemory } from "./useChatMemory"
 export type { UseChatMemoryResult } from "./useChatMemory"
 

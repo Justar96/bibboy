@@ -39,6 +39,10 @@ interface ResponseEventHandlerDeps {
   setActiveTools: Dispatch<SetStateAction<ToolExecution[]>>
   setActiveMessageId: Dispatch<SetStateAction<string | null>>
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>
+  /** Optional: Throttled tool stream callbacks (when provided, used in parallel with setActiveTools) */
+  onToolStart?: (toolCallId: string, name: string, args: unknown, rawArguments?: string) => void
+  onToolArgsUpdate?: (toolCallId: string, args: unknown, rawArguments?: string) => void
+  onToolComplete?: (toolCallId: string, output: unknown, isError?: boolean) => void
 }
 
 interface NotificationHandlerDeps {
@@ -111,17 +115,20 @@ export function createResponseEventHandlers(
         deps.toolArgsRef.current.set(itemId, rawArguments)
 
         deps.setTypingState("tool_executing")
+        const parsedArgs = safeJsonParseObject(rawArguments, {})
         deps.setActiveTools((prev) => [
           ...prev,
           {
             id: callId,
             name: toolName,
-            arguments: safeJsonParseObject(rawArguments, {}),
+            arguments: parsedArgs,
             status: "running",
             rawArguments,
             startedAt: Date.now(),
           },
         ])
+        // Also notify throttled tool stream if callback provided
+        deps.onToolStart?.(callId, toolName, parsedArgs, rawArguments)
         return
       }
 
@@ -132,18 +139,21 @@ export function createResponseEventHandlers(
           return
         }
         const result = parseToolResult(callId, output)
+        const isError = Boolean(result.error)
         deps.setActiveTools((prev) =>
           prev.map((t) =>
             t.id === callId
               ? {
                   ...t,
-                  status: result.error ? "error" : "completed",
+                  status: isError ? "error" : "completed",
                   result,
                   error: result.error,
                 }
               : t
           )
         )
+        // Also notify throttled tool stream if callback provided
+        deps.onToolComplete?.(callId, output, isError)
       }
     },
     "response.function_call_arguments.delta": (data) => {
@@ -158,17 +168,20 @@ export function createResponseEventHandlers(
         const existingArgs = deps.toolArgsRef.current.get(itemId) ?? ""
         const nextArgs = existingArgs + delta
         deps.toolArgsRef.current.set(itemId, nextArgs)
+        const parsedArgs = safeJsonParseObject(nextArgs, {})
         deps.setActiveTools((prev) =>
           prev.map((t) =>
             t.id === callId
               ? {
                   ...t,
                   rawArguments: nextArgs,
-                  arguments: safeJsonParseObject(nextArgs, t.arguments),
+                  arguments: parsedArgs,
                 }
               : t
           )
         )
+        // Also notify throttled tool stream if callback provided
+        deps.onToolArgsUpdate?.(callId, parsedArgs, nextArgs)
       }
     },
     "response.function_call_arguments.done": (data) => {
@@ -181,17 +194,20 @@ export function createResponseEventHandlers(
       const callId = deps.toolItemToCallIdRef.current.get(itemId)
       if (callId) {
         deps.toolArgsRef.current.set(itemId, argumentsJson)
+        const parsedArgs = safeJsonParseObject(argumentsJson, {})
         deps.setActiveTools((prev) =>
           prev.map((t) =>
             t.id === callId
               ? {
                   ...t,
                   rawArguments: argumentsJson,
-                  arguments: safeJsonParseObject(argumentsJson, t.arguments),
+                  arguments: parsedArgs,
                 }
               : t
           )
         )
+        // Also notify throttled tool stream if callback provided
+        deps.onToolArgsUpdate?.(callId, parsedArgs, argumentsJson)
       }
     },
     "response.completed": (data) => {

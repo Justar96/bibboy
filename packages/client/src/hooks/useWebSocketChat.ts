@@ -17,6 +17,7 @@ import {
   type ConnectionState,
   type ToolExecution,
 } from "./websocket-chat-utils"
+import { useToolStream, type ToolMessage } from "./useToolStream"
 import {
   isJsonRpcErrorResponse,
   isJsonRpcSuccessResponse,
@@ -85,6 +86,8 @@ export interface UseWebSocketChatReturn {
   readonly canvasVersion: number | null
   /** Last applied canvas operation */
   readonly lastCanvasOp: CanvasOp | null
+  /** Throttled tool messages (80ms batched) for UI rendering */
+  readonly toolMessages: ToolMessage[]
 }
 
 // ============================================================================
@@ -168,12 +171,21 @@ export function useWebSocketChat(
     toolItemToCallIdRef.current.clear()
   }, [])
 
+  // Throttled tool stream for smooth UI updates
+  const {
+    messages: toolMessages,
+    upsertTool,
+    completeTool: completeToolStream,
+    reset: resetToolStream,
+  } = useToolStream({ runId: activeMessageId })
+
   const resetStreamingState = useCallback(() => {
     setStreamingContent("")
     setActiveTools([])
     setActiveMessageId(null)
     clearToolTracking()
-  }, [clearToolTracking])
+    resetToolStream()
+  }, [clearToolTracking, resetToolStream])
 
   const stopTypingAndResetStreamingState = useCallback(() => {
     setIsTyping(false)
@@ -201,8 +213,18 @@ export function useWebSocketChat(
         setActiveTools,
         setActiveMessageId,
         setMessages,
+        // Throttled tool stream callbacks
+        onToolStart: (toolCallId, name, args, rawArguments) => {
+          upsertTool(toolCallId, { name, args, rawArguments, status: "running" })
+        },
+        onToolArgsUpdate: (toolCallId, args, rawArguments) => {
+          upsertTool(toolCallId, { args, rawArguments })
+        },
+        onToolComplete: (toolCallId, output, isError) => {
+          completeToolStream(toolCallId, output, isError)
+        },
       }),
-    [startThinking, stopTypingAndResetStreamingState]
+    [startThinking, stopTypingAndResetStreamingState, upsertTool, completeToolStream]
   )
 
   const notificationHandlers = useMemo(
@@ -528,6 +550,7 @@ export function useWebSocketChat(
       canvasBlueprint,
       canvasVersion,
       lastCanvasOp,
+      toolMessages,
     }),
     [
       connectionState,
@@ -548,6 +571,7 @@ export function useWebSocketChat(
       canvasBlueprint,
       canvasVersion,
       lastCanvasOp,
+      toolMessages,
     ]
   )
 }
