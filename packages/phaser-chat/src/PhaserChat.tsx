@@ -3,7 +3,7 @@ import * as Phaser from "phaser"
 import { ChatScene } from "./scenes/ChatScene"
 import { chunkText } from "./utils/textChunker"
 import type { ChatAdapter, ConnectionState } from "./types"
-import type { CanvasCharacterBlueprint, CanvasOp, SoulState, SoulStage } from "@bibboy/shared"
+import type { CanvasCharacterBlueprint, CanvasOp } from "@bibboy/shared"
 import { createDefaultCanvasBlueprint } from "@bibboy/shared"
 
 // ---------------------------------------------------------------------------
@@ -18,11 +18,9 @@ interface PhaserChatProps {
   readonly canvasBlueprint?: CanvasCharacterBlueprint | null
   readonly canvasVersion?: number | null
   readonly lastCanvasOp?: CanvasOp | null
-  readonly soulState?: SoulState | null
-  readonly soulStage?: SoulStage | null
 }
 
-export function PhaserChat({ chatAdapter, connectionState, canvasBlueprint, canvasVersion, lastCanvasOp, soulState, soulStage }: PhaserChatProps) {
+export function PhaserChat({ chatAdapter, connectionState, canvasBlueprint, canvasVersion, lastCanvasOp }: PhaserChatProps) {
   const gameContainerRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<Phaser.Game | null>(null)
   const [inputValue, setInputValue] = useState("")
@@ -142,20 +140,6 @@ export function PhaserChat({ chatAdapter, connectionState, canvasBlueprint, canv
     lastAppliedVersionRef.current = nextVersion
   }, [canvasBlueprint, canvasVersion, lastCanvasOp, getScene])
 
-  // Bridge: soul state → SoulCharacter
-  useEffect(() => {
-    if (soulState) {
-      getScene()?.handleSoulStateUpdate(soulState)
-    }
-  }, [soulState, getScene])
-
-  // Bridge: soul stage change → SoulCharacter
-  useEffect(() => {
-    if (soulStage) {
-      getScene()?.handleSoulStageChange(soulStage)
-    }
-  }, [soulStage, getScene])
-
   // Auto-refocus input after response completes or chunks end
   const prevTypingRef = useRef(isTyping)
   useEffect(() => {
@@ -244,7 +228,7 @@ export function PhaserChat({ chatAdapter, connectionState, canvasBlueprint, canv
 
   return (
     <section className="flex flex-col">
-      <span className="block font-mono text-[9px] text-[#CCCCCC] uppercase tracking-[0.2em] mb-2 mt-3">
+      <span className="block font-mono text-[9px] text-ink-300 uppercase tracking-[0.2em] mb-2 mt-3">
         Playground
       </span>
 
@@ -258,22 +242,22 @@ export function PhaserChat({ chatAdapter, connectionState, canvasBlueprint, canv
       {/* Input Bar */}
       <div className="mt-2 sm:mt-4">
         <div
-          className={`flex items-center gap-3 border rounded-md px-3.5 py-2.5 bg-white transition-all duration-200 ${
+          className={`flex items-center gap-3 border rounded-md px-3.5 py-2.5 bg-paper-100 transition-all duration-200 ${
             inputState === "thinking"
-              ? "border-[#E8E8E8] opacity-60"
+              ? "border-paper-300 opacity-60"
               : inputState === "chunks"
-                ? "border-[#4A90D9]/30 bg-[#4A90D9]/[0.02]"
-                : "border-[#E8E8E8] focus-within:border-[#1A1A1A]"
+                ? "border-[#4A90D9]/30 bg-[#4A90D9]/[0.05]"
+                : "border-paper-300 focus-within:border-ink-500"
           }`}
         >
           {/* Prompt indicator */}
           <span
             className={`text-[12px] font-mono select-none shrink-0 tabular-nums transition-colors duration-200 ${
               inputState === "thinking"
-                ? "text-[#AAAAAA] animate-pulse"
+                ? "text-ink-300 animate-pulse"
                 : inputState === "chunks"
-                  ? "text-[#4A90D9]"
-                  : "text-[#BBBBBB]"
+                  ? "text-[#6B9FFF]"
+                  : "text-ink-300"
             }`}
           >
             {promptChar}
@@ -283,7 +267,7 @@ export function PhaserChat({ chatAdapter, connectionState, canvasBlueprint, canv
           {inputState === "chunks" ? (
             <span
               onClick={advanceChunk}
-              className="flex-1 text-left text-[13px] text-[#666666] font-mono transition-colors hover:text-[#1A1A1A] cursor-pointer select-none"
+              className="flex-1 text-left text-[13px] text-ink-400 font-mono transition-colors hover:text-ink-700 cursor-pointer select-none"
             >
               {chunkCurrent + 1 < chunkTotal ? "continue reading \u2192" : "finish \u2192"}
             </span>
@@ -295,7 +279,7 @@ export function PhaserChat({ chatAdapter, connectionState, canvasBlueprint, canv
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={isTyping ? "thinking\u2026" : "ask me anything"}
-              className="flex-1 bg-transparent text-[16px] sm:text-[14px] text-[#1A1A1A] leading-[1.6] placeholder:text-[#CCCCCC] disabled:text-[#AAAAAA] disabled:placeholder:text-[#DDDDDD] caret-[#1A1A1A] font-[Inter,system-ui,sans-serif] outline-none"
+              className="flex-1 bg-transparent text-[16px] sm:text-[14px] text-ink-700 leading-[1.6] placeholder:text-ink-300 disabled:text-ink-300 disabled:placeholder:text-ink-200 caret-ink-600 font-[Inter,system-ui,sans-serif] outline-none"
               style={{ outline: "none" }}
               disabled={isTyping}
               autoFocus
@@ -308,13 +292,13 @@ export function PhaserChat({ chatAdapter, connectionState, canvasBlueprint, canv
             <button
               type="button"
               onClick={handleSend}
-              className="text-[#1A1A1A] text-[11px] font-mono uppercase tracking-[0.08em] transition-opacity hover:opacity-60 shrink-0 outline-none"
+              className="text-ink-700 text-[11px] font-mono uppercase tracking-[0.08em] transition-opacity hover:opacity-60 shrink-0 outline-none"
             >
               Enter \u21B5
             </button>
           )}
           {inputState === "chunks" && (
-            <span className="text-[10px] font-mono text-[#AAAAAA] shrink-0">
+            <span className="text-[10px] font-mono text-ink-300 shrink-0">
               Enter / Click
             </span>
           )}
@@ -330,7 +314,7 @@ export function PhaserChat({ chatAdapter, connectionState, canvasBlueprint, canv
                 {" \u00B7 "}
                 <button
                   type="button"
-                  className="text-[#0066CC] cursor-pointer hover:underline outline-none"
+                  className="text-[#6B9FFF] cursor-pointer hover:underline outline-none"
                   onClick={wsConnect}
                 >
                   Retry

@@ -35,7 +35,7 @@
 /* Thin scrollbar for sidebar panels */
 .sidebar-scroll {
   scrollbar-width: thin;
-  scrollbar-color: #E0E0E0 transparent;
+  scrollbar-color: #3A3A3E transparent;
 }
 .sidebar-scroll::-webkit-scrollbar {
   width: 4px;
@@ -44,11 +44,11 @@
   background: transparent;
 }
 .sidebar-scroll::-webkit-scrollbar-thumb {
-  background: #E0E0E0;
+  background: #3A3A3E;
   border-radius: 2px;
 }
 .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background: #CCCCCC;
+  background: #4A4A52;
 }
 
 /* Enhanced rendering for crisp, smooth UI like Next.js */
@@ -89,18 +89,18 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #D8D8D8;
+    background: #3A3A3E;
     border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #C0C0C0;
+    background: #4A4A52;
   }
 
   /* Firefox scrollbar */
   * {
     scrollbar-width: thin;
-    scrollbar-color: #D8D8D8 transparent;
+    scrollbar-color: #3A3A3E transparent;
   }
 
   /* Enhanced smooth transitions with better easing */
@@ -208,9 +208,9 @@
 .skeleton {
   background: linear-gradient(
     90deg,
-    #F3F3F3 25%,
-    #EAEAEA 50%,
-    #F3F3F3 75%
+    #2A2A2E 25%,
+    #333338 50%,
+    #2A2A2E 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
@@ -254,8 +254,8 @@
 
 /* Paper dossier typography - Funnel Sans for calm, expressive feel */
 body {
-    background-color: #FAFAFA;
-    color: #1A1A1A;
+    background-color: #1C1C20;
+    color: #DCDCE2;
     font-family: 'Inter', system-ui, sans-serif;
     line-height: 1.6;
     font-size: 1rem;
@@ -277,24 +277,24 @@ a {
 }
 
 a:hover {
-    color: #2563eb;
+    color: #6B9FFF;
 }
 
 /* Focus styles for keyboard accessibility (Requirements 9.3, 9.5) */
 a:focus-visible {
-    outline: 2px solid #8b7355; /* ink-400 */
+    outline: 2px solid #9A9AA0; /* ink-400 */
     outline-offset: 2px;
     border-radius: 3px;
 }
 
 button:focus-visible {
-    outline: 2px solid #8b7355; /* ink-400 */
+    outline: 2px solid #9A9AA0; /* ink-400 */
     outline-offset: 2px;
 }
 
 input:focus-visible,
 select:focus-visible {
-    outline: 2px solid #8b7355; /* ink-400 */
+    outline: 2px solid #9A9AA0; /* ink-400 */
     outline-offset: 2px;
     border-radius: 3px;
 }
@@ -315,12 +315,12 @@ button {
 button:hover:not(:disabled) {
   opacity: 0.9;
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 button:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 button:disabled {
@@ -344,7 +344,7 @@ h1 {
     font-size: 2.5rem;
     font-weight: 600;
     line-height: 1.1;
-    color: #1A1A1A;
+    color: #EBEBF0;
     letter-spacing: -0.02em;
     text-rendering: optimizeLegibility;
 }
@@ -354,7 +354,7 @@ h2 {
     font-size: 1.875rem;
     font-weight: 600;
     line-height: 1.2;
-    color: #1A1A1A;
+    color: #EBEBF0;
     letter-spacing: -0.015em;
     text-rendering: optimizeLegibility;
 }
@@ -364,7 +364,7 @@ h3 {
     font-size: 1.5rem;
     font-weight: 500;
     line-height: 1.25;
-    color: #1A1A1A;
+    color: #EBEBF0;
     text-rendering: optimizeLegibility;
 }
 
@@ -372,7 +372,7 @@ h4 {
     font-family: 'Lora', Georgia, serif;
     font-size: 1.25rem;
     font-weight: 500;
-    color: #333333;
+    color: #DCDCE2;
     text-rendering: optimizeLegibility;
 }
 
@@ -380,14 +380,14 @@ h5 {
     font-family: 'Lora', Georgia, serif;
     font-size: 1.125rem;
     font-weight: 500;
-    color: #333333;
+    color: #DCDCE2;
     text-rendering: optimizeLegibility;
 }
 
 p {
     margin-bottom: 1rem;
     line-height: 1.6;
-    color: #444444;
+    color: #ADADB4;
     font-weight: 400;
 }
 
@@ -403,8 +403,8 @@ li {
 
 /* Paper dossier code blocks - JetBrains Mono for crisp code */
 pre {
-    background-color: #F8F8F8;
-    border: 1px solid #E8E8E8;
+    background-color: #222226;
+    border: 1px solid #333338;
     border-radius: 3px; /* paper border-radius */
     padding: 1rem;
     overflow-x: auto;
@@ -412,7 +412,7 @@ pre {
     margin: 1rem 0;
     font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
     font-size: 0.875rem;
-    color: #333333;
+    color: #DCDCE2;
     line-height: 1.6;
     /* Crisp monospace rendering */
     font-feature-settings: "liga" 1, "calt" 1;
@@ -421,11 +421,11 @@ pre {
 code {
     font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
     font-size: 0.875em;
-    background-color: #F8F8F8;
+    background-color: #222226;
     padding: 0.15rem 0.35rem;
     border-radius: 3px;
-    border: 1px solid #E8E8E8;
-    color: #333333;
+    border: 1px solid #333338;
+    color: #DCDCE2;
     font-feature-settings: "liga" 1, "calt" 1;
 }
 
@@ -437,20 +437,20 @@ pre code {
 }
 
 blockquote {
-    border-left: 3px solid #E8E8E8;
+    border-left: 3px solid #3E3E44;
     padding-left: 1rem;
     margin: 1rem 0;
-    color: #666666;
+    color: #9A9AA0;
     font-style: italic;
 }
 
 /* Paper dossier card style */
 .card {
-    background: #fbf9f4; /* paper-100 */
-    border: 1px solid #e8dfd0; /* paper-400 */
+    background: #222226; /* paper-100 */
+    border: 1px solid #3E3E44; /* paper-400 */
     border-radius: 6px; /* paper-lg */
     padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(74, 58, 42, 0.08), 0 1px 2px rgba(74, 58, 42, 0.06);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* Paper dossier kbd styling - JetBrains Mono */
@@ -459,11 +459,11 @@ kbd {
     padding: 0.15rem 0.4rem;
     font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
     font-size: 0.75rem;
-    color: #3d2f22; /* ink-700 */
-    background-color: #f5f1eb; /* paper-200 */
-    border: 1px solid #d4c8b8; /* paper-500 */
+    color: #DCDCE2; /* ink-700 */
+    background-color: #2A2A2E; /* paper-200 */
+    border: 1px solid #4A4A52; /* paper-500 */
     border-radius: 3px;
-    box-shadow: 0 1px 0 rgba(74, 58, 42, 0.1);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
 }
 
 /* Chat content styling - Funnel Sans for consistent feel */
@@ -471,7 +471,7 @@ kbd {
   font-family: 'Funnel Sans', system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.5;
-  color: #2d231a;
+  color: #DCDCE2;
   font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
   -webkit-font-smoothing: antialiased;
 }
@@ -486,7 +486,7 @@ kbd {
 
 .chat-content strong {
   font-weight: 600;
-  color: #2d231a;
+  color: #EBEBF0;
 }
 
 .chat-content em {
@@ -519,7 +519,7 @@ kbd {
 }
 
 .chat-content li strong:first-child {
-  color: #1a1412;
+  color: #EBEBF0;
 }
 
 /* Chat list items (parsed from markdown) */
@@ -537,7 +537,7 @@ kbd {
 }
 
 .chat-list-item strong:first-child {
-  color: #1A1A1A;
+  color: #EBEBF0;
 }
 
 /* Chat list wrapper (parsed from markdown) */
@@ -569,20 +569,20 @@ ol.chat-list {
 
 /* Chat blockquotes */
 .chat-blockquote {
-  border-left: 3px solid #c9b99a;
+  border-left: 3px solid #4A4A52;
   padding-left: 0.875rem;
   margin: 0.5rem 0;
-  color: #5a4a3a;
+  color: #9A9AA0;
   font-style: italic;
 }
 
 /* Chat code block wrapper with header */
 .chat-code-wrapper {
-  border: 1px solid #E8E8E8;
+  border: 1px solid #333338;
   border-radius: 4px;
   margin: 0.5rem 0;
   overflow: hidden;
-  background: #F8F8F8;
+  background: #222226;
 }
 
 .chat-code-header {
@@ -590,14 +590,14 @@ ol.chat-list {
   align-items: center;
   justify-content: space-between;
   padding: 0.25rem 0.625rem;
-  background: #F0F0F0;
-  border-bottom: 1px solid #E8E8E8;
+  background: #2A2A2E;
+  border-bottom: 1px solid #333338;
 }
 
 .chat-code-lang {
   font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
   font-size: 11px;
-  color: #888;
+  color: #7A7A82;
   text-transform: lowercase;
   letter-spacing: 0.02em;
 }
@@ -610,7 +610,7 @@ ol.chat-list {
   border-radius: 3px;
   font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
   font-size: 10px;
-  color: #999;
+  color: #7A7A82;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -618,8 +618,8 @@ ol.chat-list {
 }
 
 .chat-code-copy:hover {
-  background: #E0E0E0;
-  color: #555;
+  background: #333338;
+  color: #ADADB4;
   transform: none;
   box-shadow: none;
 }
@@ -639,7 +639,7 @@ ol.chat-list {
 /* Chat headings (smaller than blog) */
 .chat-heading {
   font-weight: 600;
-  color: #1A1A1A;
+  color: #EBEBF0;
   margin-top: 0.75rem;
   margin-bottom: 0.375rem;
   line-height: 1.3;
@@ -667,13 +667,13 @@ ol.chat-list {
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 0.9375rem;
   font-weight: 600;
-  color: #333;
+  color: #C4C4CC;
 }
 
 /* Chat horizontal rule */
 .chat-hr {
   border: none;
-  border-top: 1px solid #e8dfd0;
+  border-top: 1px solid #333338;
   margin: 0.75rem 0;
 }
 
@@ -682,7 +682,7 @@ ol.chat-list {
   overflow-x: auto;
   margin: 0.5rem 0;
   border-radius: 4px;
-  border: 1px solid #E8E8E8;
+  border: 1px solid #333338;
 }
 
 .chat-table {
@@ -693,18 +693,18 @@ ol.chat-list {
 }
 
 .chat-table th {
-  background: #F0F0F0;
+  background: #2A2A2E;
   font-weight: 600;
-  color: #1A1A1A;
+  color: #EBEBF0;
   padding: 0.375rem 0.625rem;
-  border-bottom: 1px solid #E8E8E8;
+  border-bottom: 1px solid #333338;
   text-align: left;
 }
 
 .chat-table td {
   padding: 0.375rem 0.625rem;
-  border-bottom: 1px solid #F0F0F0;
-  color: #444;
+  border-bottom: 1px solid #2A2A2E;
+  color: #ADADB4;
 }
 
 .chat-table tr:last-child td {
@@ -712,7 +712,7 @@ ol.chat-list {
 }
 
 .chat-table tr:hover td {
-  background: #FAFAFA;
+  background: #222226;
 }
 
 /* Chat paragraph blocks */
@@ -727,8 +727,8 @@ ol.chat-list {
 /* Chat code blocks - Compact with JetBrains Mono */
 .chat-code-block {
   display: block;
-  background-color: #F8F8F8;
-  border: 1px solid #E8E8E8;
+  background-color: #222226;
+  border: 1px solid #333338;
   border-radius: 4px;
   padding: 0.5rem 0.75rem;
   margin: 0.5rem 0;
@@ -764,14 +764,14 @@ ol.chat-list {
   background: transparent;
   border: none;
   padding: 0;
-  color: #1A1A1A;
+  color: #DCDCE2;
   font-size: 13px;
 }
 
 /* Chat inline code */
 .chat-inline-code {
-  background-color: #F0F0F0;
-  color: #1A1A1A;
+  background-color: #2A2A2E;
+  color: #DCDCE2;
   padding: 0.1rem 0.3rem;
   border-radius: 3px;
   font-size: 13px;
@@ -781,21 +781,21 @@ ol.chat-list {
 
 /* Chat links */
 .chat-link {
-  color: #2563eb;
+  color: #6B9FFF;
   text-decoration: none;
-  border-bottom: 1px solid #bfdbfe;
+  border-bottom: 1px solid #6B9FFF40;
   transition: border-color 0.15s ease;
 }
 
 .chat-link:hover {
-  border-color: #2563eb;
+  border-color: #6B9FFF;
 }
 
 /* Styled chat links with clear visual indicators */
 .chat-link-styled {
-  color: #0066CC;
+  color: #6B9FFF;
   text-decoration: underline;
-  text-decoration-color: #0066CC80;
+  text-decoration-color: #6B9FFF80;
   text-underline-offset: 2px;
   text-decoration-thickness: 1px;
   transition: all 0.15s ease;
@@ -803,8 +803,8 @@ ol.chat-list {
 }
 
 .chat-link-styled:hover {
-  color: #004C99;
-  text-decoration-color: #004C99;
+  color: #8BB4FF;
+  text-decoration-color: #8BB4FF;
   text-decoration-thickness: 2px;
 }
 
@@ -854,30 +854,30 @@ ol.chat-list {
    ============================================================================ */
 
 .thinking-block {
-  background: #FAFAFA;
-  border: 1px solid #E8E8E8;
+  background: #222226;
+  border: 1px solid #333338;
   border-radius: 6px;
   margin-bottom: 0.75rem;
   overflow: hidden;
-  border-left: 3px solid #E8E8E8;
+  border-left: 3px solid #333338;
   transition: border-color 0.3s ease, background 0.3s ease;
 }
 
 /* Streaming state — pulsing warm border + subtle gradient */
 .thinking-block--streaming {
-  border-left: 3px solid #c9b99a;
-  background: linear-gradient(135deg, #FAFAF8 0%, #F8F6F0 100%);
+  border-left: 3px solid #5D7A8F;
+  background: linear-gradient(135deg, #222226 0%, #252530 100%);
   animation: thinking-pulse 2s ease-in-out infinite;
 }
 
 @keyframes thinking-pulse {
   0%, 100% {
-    border-left-color: #c9b99a;
-    background: linear-gradient(135deg, #FAFAF8 0%, #F8F6F0 100%);
+    border-left-color: #5D7A8F;
+    background: linear-gradient(135deg, #222226 0%, #252530 100%);
   }
   50% {
-    border-left-color: #a89474;
-    background: linear-gradient(135deg, #F8F6F0 0%, #F5F1EB 100%);
+    border-left-color: #7A9AB0;
+    background: linear-gradient(135deg, #252530 0%, #282838 100%);
   }
 }
 
@@ -886,7 +886,7 @@ ol.chat-list {
 }
 
 .thinking-block button:focus-visible {
-  outline: 2px solid #0066CC;
+  outline: 2px solid #6B9FFF;
   outline-offset: -2px;
 }
 
@@ -910,7 +910,7 @@ ol.chat-list {
 
 .tool-chip:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(74, 58, 42, 0.08);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Subtle pulse animation for running tool cards */
@@ -929,14 +929,14 @@ ol.chat-list {
 
 /* Streaming bubble — subtle pulsing border in warm tones */
 .chat-bubble-streaming {
-  border: 1px solid #E8E8E8;
+  border: 1px solid #333338;
   border-radius: 0.5rem;
   animation: streaming-pulse 1.5s ease-out infinite;
 }
 
 @keyframes streaming-pulse {
-  0%, 100% { border-color: #E8E8E8; }
-  50% { border-color: #c9b99a; }
+  0%, 100% { border-color: #333338; }
+  50% { border-color: #5D7A8F; }
 }
 
 /* Tool activity panel */
@@ -959,7 +959,7 @@ ol.chat-list {
   justify-content: space-between;
   padding-bottom: 0.75rem;
   margin-bottom: 1rem;
-  border-bottom: 1px solid #ebe5db;
+  border-bottom: 1px solid #333338;
 }
 
 .tool-detail-panel__body {
@@ -976,18 +976,18 @@ ol.chat-list {
 }
 
 .tool-status-badge--running {
-  background-color: #fef3c7;
-  color: #b45309;
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #F59E0B;
 }
 
 .tool-status-badge--completed {
-  background-color: #d1fae5;
-  color: #047857;
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10B981;
 }
 
 .tool-status-badge--error {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
 }
 
 /* ============================================================================
@@ -1019,8 +1019,8 @@ ol.chat-list {
   background: linear-gradient(
     to right,
     transparent,
-    #e8dfd0 20%,
-    #e8dfd0 80%,
+    #333338 20%,
+    #333338 80%,
     transparent
   );
   opacity: 0.6;
@@ -1051,7 +1051,7 @@ ol.chat-list {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: #1A1A1A;
+  color: #EBEBF0;
   margin-bottom: 0.5rem;
   padding-left: 2rem;
 }
@@ -1066,14 +1066,14 @@ ol.chat-list {
   font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
   font-size: 11px;
   font-style: italic;
-  color: #AAAAAA;
+  color: #7A7A82;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   padding: 0.5rem 0;
 }
 
 .screenplay-script {
-  border-left: 2px solid #F0F0F0;
+  border-left: 2px solid #333338;
   margin-left: 0.5rem;
   padding-left: 1rem;
 }
@@ -1099,7 +1099,7 @@ ol.chat-list {
   display: inline-block;
   width: 2px;
   height: 1em;
-  background-color: #1A1A1A;
+  background-color: #DCDCE2;
   animation: screenplay-blink 1s step-end infinite;
   vertical-align: text-bottom;
   margin-left: 1px;

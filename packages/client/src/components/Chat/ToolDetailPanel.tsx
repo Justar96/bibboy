@@ -84,9 +84,9 @@ export function ToolDetailPanel({ tool, onClose }: ToolDetailPanelProps) {
   const config = getToolDisplay(tool.name)
 
   const statusBadge = {
-    running: { label: "Running", cls: "bg-amber-100 text-amber-700" },
-    completed: { label: "Completed", cls: "bg-emerald-100 text-emerald-700" },
-    error: { label: "Error", cls: "bg-red-100 text-red-700" },
+    running: { label: "Running", cls: "bg-amber-500/15 text-amber-400" },
+    completed: { label: "Completed", cls: "bg-emerald-500/15 text-emerald-400" },
+    error: { label: "Error", cls: "bg-red-500/15 text-red-400" },
   }[tool.status]
 
   const resultText = tool.result?.content
@@ -162,13 +162,13 @@ export function ToolDetailPanel({ tool, onClose }: ToolDetailPanelProps) {
         )}
 
         {tool.status === "error" && tool.result?.error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-3 text-xs text-red-700">
+          <div className="bg-red-500/10 border border-red-500/20 rounded-md p-3 text-xs text-red-400">
             {tool.result.error}
           </div>
         )}
 
         {tool.status === "completed" && formattedResult && (
-          <div className="bg-white border border-ink-100 rounded-md p-3 text-xs overflow-auto max-h-[400px]">
+          <div className="bg-paper-200 border border-paper-300 rounded-md p-3 text-xs overflow-auto max-h-[400px]">
             <div className="chat-content prose prose-sm max-w-none">
               <ChatContent content={formattedResult} />
             </div>

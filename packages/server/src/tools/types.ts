@@ -39,7 +39,7 @@ export interface AgentTool {
 /**
  * Tool group names for dynamic tool loading.
  */
-export type ToolGroupName = "core" | "web" | "canvas" | "soul" | "workspace"
+export type ToolGroupName = "core" | "web" | "canvas" | "workspace"
 
 /**
  * Tool group metadata for the request_tools meta-tool.

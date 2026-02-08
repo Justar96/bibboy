@@ -6,8 +6,6 @@ import {
   type CharacterState,
   type ChatMessage,
   type TypingState,
-  type SoulState,
-  type SoulStage,
 } from "@bibboy/shared"
 import {
   getDefaultWebSocketUrl,
@@ -87,10 +85,6 @@ export interface UseWebSocketChatReturn {
   readonly canvasVersion: number | null
   /** Last applied canvas operation */
   readonly lastCanvasOp: CanvasOp | null
-  /** Current soul evolution state */
-  readonly soulState: SoulState | null
-  /** Current soul evolution stage (convenience shortcut) */
-  readonly soulStage: SoulStage | null
 }
 
 // ============================================================================
@@ -134,8 +128,6 @@ export function useWebSocketChat(
   const [canvasBlueprint, setCanvasBlueprint] = useState<CanvasCharacterBlueprint | null>(null)
   const [canvasVersion, setCanvasVersion] = useState<number | null>(null)
   const [lastCanvasOp, setLastCanvasOp] = useState<CanvasOp | null>(null)
-  const [soulState, setSoulState] = useState<SoulState | null>(null)
-  const [soulStage, setSoulStage] = useState<SoulStage | null>(null)
 
   // Refs
   const wsRef = useRef<WebSocket | null>(null)
@@ -223,8 +215,6 @@ export function useWebSocketChat(
         setCanvasVersion,
         setCanvasBlueprint,
         setLastCanvasOp,
-        setSoulState,
-        setSoulStage,
       }),
     []
   )
@@ -474,8 +464,6 @@ export function useWebSocketChat(
     setCanvasBlueprint(null)
     setCanvasVersion(null)
     setLastCanvasOp(null)
-    setSoulState(null)
-    setSoulStage(null)
   }, [resetStreamingState])
 
   // Auto-connect on mount if enabled
@@ -540,8 +528,6 @@ export function useWebSocketChat(
       canvasBlueprint,
       canvasVersion,
       lastCanvasOp,
-      soulState,
-      soulStage,
     }),
     [
       connectionState,
@@ -562,8 +548,6 @@ export function useWebSocketChat(
       canvasBlueprint,
       canvasVersion,
       lastCanvasOp,
-      soulState,
-      soulStage,
     ]
   )
 }

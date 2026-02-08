@@ -40,41 +40,41 @@ const config: Config = {
         'uppercase': '0.15em',  // For uppercase labels and section headers
       },
       colors: {
-        // Paper palette - warm paper tones from lightest cream to manila
+        // Paper palette - dark gray surfaces (darkest to lightest)
         paper: {
-          50: '#fdfcfa',   // Lightest cream
-          100: '#fbf9f4',  // Light paper
-          200: '#f5f1eb',  // Warm white
-          300: '#efe9e0',  // Aged paper
-          400: '#e8dfd0',  // Parchment
-          500: '#d4c8b8',  // Manila
+          50: '#1C1C20',   // Deepest background
+          100: '#222226',  // Panel background
+          200: '#2A2A2E',  // Elevated surface
+          300: '#333338',  // Border / divider
+          400: '#3E3E44',  // Strong border
+          500: '#4A4A52',  // Muted surface
         },
-        // Ink palette - from light to deep black
+        // Ink palette - light text on dark (muted to bright)
         ink: {
-          50: '#f5f3f0',
-          100: '#e8e4de',
-          200: '#c9c2b8',
-          300: '#a69d90',
-          400: '#8b7355',  // Faded ink
-          500: '#6b5a47',  // Medium ink
-          600: '#4a3a2a',  // Dark ink
-          700: '#3d2f22',  // Rich ink
-          800: '#2d231a',  // Deep ink
-          900: '#1a1510',  // Black ink
+          50: '#2A2A2E',   // Subtle bg tint
+          100: '#3A3A3E',  // Faint border
+          200: '#55555C',  // Disabled text
+          300: '#7A7A82',  // Muted text
+          400: '#9A9AA0',  // Secondary text
+          500: '#ADADB4',  // Body text
+          600: '#C4C4CC',  // Primary text
+          700: '#DCDCE2',  // Heading text
+          800: '#EBEBF0',  // Bright text
+          900: '#F5F5FA',  // White text
         },
-        // Accent colors
+        // Accent colors (adjusted for dark bg)
         accent: {
-          rust: '#a65d3f',
-          sage: '#7a8b6e',
-          navy: '#3d4f5f',
-          gold: '#b8963e',
+          rust: '#D4785A',
+          sage: '#8FA87E',
+          navy: '#5D7A8F',
+          gold: '#D4AD4A',
         },
       },
       boxShadow: {
-        'paper': '0 1px 3px rgba(74, 58, 42, 0.08), 0 1px 2px rgba(74, 58, 42, 0.06)',
-        'paper-md': '0 4px 6px rgba(74, 58, 42, 0.07), 0 2px 4px rgba(74, 58, 42, 0.06)',
-        'paper-lg': '0 10px 15px rgba(74, 58, 42, 0.08), 0 4px 6px rgba(74, 58, 42, 0.05)',
-        'paper-lift': '0 12px 20px rgba(74, 58, 42, 0.1), 0 4px 8px rgba(74, 58, 42, 0.06)',
+        'paper': '0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2)',
+        'paper-md': '0 4px 6px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2)',
+        'paper-lg': '0 10px 15px rgba(0, 0, 0, 0.35), 0 4px 6px rgba(0, 0, 0, 0.2)',
+        'paper-lift': '0 12px 20px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.25)',
       },
       borderRadius: {
         'paper': '3px',

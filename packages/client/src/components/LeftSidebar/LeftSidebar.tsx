@@ -37,12 +37,12 @@ export const LeftSidebar = memo(function LeftSidebar({ data }: { data: LeftSideb
   return (
     <div ref={containerRef} className="h-full flex flex-col">
       {/* Sticky Header */}
-      <div className="shrink-0 bg-white border-b border-[#EBEBEB] px-4 py-3">
+      <div className="shrink-0 bg-paper-100 border-b border-paper-300 px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[12px] font-semibold text-[#0066CC] uppercase tracking-[0.1em]">
+          <span className="font-mono text-[12px] font-semibold text-[#6B9FFF] uppercase tracking-[0.1em]">
             Bibboy
           </span>
-          <span className="font-mono text-[10px] text-[#BBBBBB]">v{APP_VERSION}</span>
+          <span className="font-mono text-[10px] text-ink-300">v{APP_VERSION}</span>
         </div>
       </div>
 
@@ -52,7 +52,7 @@ export const LeftSidebar = memo(function LeftSidebar({ data }: { data: LeftSideb
           <ActivitySection groups={data.activityGroups} listMaxHeightClass="max-h-none" />
         ) : (
           <div className="px-4 py-8 text-center">
-            <span className="font-mono text-[10px] text-[#CCCCCC]">
+            <span className="font-mono text-[10px] text-ink-300">
               Open Playground to see activity
             </span>
           </div>
@@ -62,15 +62,15 @@ export const LeftSidebar = memo(function LeftSidebar({ data }: { data: LeftSideb
       {/* Task Zone (desktop resizable panel) */}
       {data && (
         <div
-          className="shrink-0 flex flex-col min-h-0 border-t border-[#EBEBEB] bg-white"
+          className="shrink-0 flex flex-col min-h-0 border-t border-paper-300 bg-paper-100"
           style={{ height: taskPanelHeight }}
         >
           <div
             onMouseDown={onDragStart}
-            className="h-2 cursor-row-resize hover:bg-[#F5F5F5] transition-colors flex items-center justify-center"
+            className="h-2 cursor-row-resize hover:bg-paper-200 transition-colors flex items-center justify-center"
             aria-label="Resize task panel"
           >
-            <span className="w-7 h-px bg-[#D6D6D6]" />
+            <span className="w-7 h-px bg-paper-400" />
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto sidebar-scroll">
             <TaskSection

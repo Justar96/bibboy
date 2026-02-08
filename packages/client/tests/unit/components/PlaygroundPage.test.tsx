@@ -91,8 +91,6 @@ vi.mock("../../../src/hooks/useWebSocketChat", () => ({
     canvasBlueprint: null,
     canvasVersion: null,
     lastCanvasOp: null,
-    soulState: null,
-    soulStage: null,
   }),
 }))
 

@@ -262,34 +262,6 @@ export type {
   CanvasLayerVisibility,
 } from "./schemas/canvas"
 
-// Soul evolution schemas/types
-export {
-  SOUL_STAGES,
-  SoulStageSchema,
-  SOUL_STAGE_THRESHOLDS,
-  PERSONALITY_TRAITS,
-  PersonalityTraitSchema,
-  isPersonalityTrait,
-  SoulEvolutionEventSchema,
-  TraitScoresSchema,
-  SoulStateSchema,
-  SoulStageChangePayloadSchema,
-  SoulStateSnapshotPayloadSchema,
-  getNextStage,
-  createDefaultTraitScores,
-  createDefaultSoulState,
-  getDominantTraits,
-} from "./schemas/soul"
-export type {
-  SoulStage,
-  PersonalityTrait,
-  SoulEvolutionEvent,
-  TraitScores,
-  SoulState,
-  SoulStageChangePayload,
-  SoulStateSnapshotPayload,
-} from "./schemas/soul"
-
 // WebSocket schemas and types
 export {
   // JSON-RPC base
@@ -316,8 +288,6 @@ export {
   PoseChangeNotificationSchema,
   CanvasStatePatchNotificationSchema,
   CanvasStateSnapshotNotificationSchema,
-  SoulStageChangeNotificationSchema,
-  SoulStateSnapshotNotificationSchema,
   ServerNotificationSchema,
   ServerMessageSchema,
   // Session types
@@ -349,8 +319,6 @@ export type {
   PoseChangeNotification,
   CanvasStatePatchNotification,
   CanvasStateSnapshotNotification,
-  SoulStageChangeNotification,
-  SoulStateSnapshotNotification,
   ServerNotification,
   ServerMessage,
   SessionToolCall,

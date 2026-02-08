@@ -174,7 +174,7 @@ export function ToolOutputSidebar({
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={SPRING}
-                className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-md text-xs text-red-700"
+                className="mb-3 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-md text-xs text-red-400"
               >
                 {content.error}
               </motion.div>

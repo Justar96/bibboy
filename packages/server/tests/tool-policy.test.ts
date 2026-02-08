@@ -304,10 +304,9 @@ describe("TOOL_PROFILES", () => {
     expect(TOOL_PROFILES.full).toEqual([])
   })
 
-  it("messaging profile includes canvas and soul groups", () => {
+  it("messaging profile includes canvas group", () => {
     const expanded = expandToolGroups(TOOL_PROFILES.messaging)
     expect(expanded).toContain("canvas_set_pose")
-    expect(expanded).toContain("soul_observe_trait")
   })
 })
 

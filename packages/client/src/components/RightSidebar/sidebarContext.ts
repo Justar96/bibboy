@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react"
-import type { ChatMessage, SoulState, SoulStage } from "@bibboy/shared"
+import type { ChatMessage } from "@bibboy/shared"
 import type { ConnectionState } from "@/hooks/websocket-chat-utils"
 
 // ============================================================================
@@ -20,8 +20,6 @@ export interface ChatDataContextValue {
 
 /** Agent config data exposed via context for the AgentConfigPanel */
 export interface AgentConfigContextValue {
-  readonly soulState: SoulState | null
-  readonly soulStage: SoulStage
   readonly connectionState: ConnectionState
 }
 
@@ -54,8 +52,6 @@ export function useChatData(): ChatDataContextValue {
 // ============================================================================
 
 const defaultAgentConfig: AgentConfigContextValue = {
-  soulState: null,
-  soulStage: "orb",
   connectionState: "disconnected",
 }
 

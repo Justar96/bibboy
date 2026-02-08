@@ -1,11 +1,10 @@
 import * as Phaser from "phaser"
-import type { AgentPose, CanvasCharacterBlueprint, CanvasOp, CharacterState, SoulState, SoulStage } from "@bibboy/shared"
+import type { AgentPose, CanvasCharacterBlueprint, CanvasOp, CharacterState } from "@bibboy/shared"
 import { SoulCharacter } from "../sprites/SoulCharacter"
 import { SpeechBubble } from "../ui/SpeechBubble"
 
 const GROUND_Y_OFFSET = 40
 const BOY_MARGIN = 80
-const SPRITE_HEIGHT = 16 * 3 / 2 + 12 // half sprite height (scaled) + aura + margin
 
 const ENTRANCE_START_X = -30
 const BUBBLE_GAP = 12
@@ -101,18 +100,6 @@ export class ChatScene extends Phaser.Scene {
     this.boy.flash()
   }
 
-  /** Update soul state (from WebSocket snapshot). */
-  handleSoulStateUpdate(state: SoulState): void {
-    if (!this.boy) return
-    this.boy.setSoulState(state)
-  }
-
-  /** Update soul stage (from WebSocket stage_change). */
-  handleSoulStageChange(stage: SoulStage): void {
-    if (!this.boy) return
-    this.boy.setSoulStage(stage)
-  }
-
   /** Response arrived as chunks — start showing them. */
   handleResponseChunks(chunks: string[]): void {
     if (!this.boy || chunks.length === 0) return
@@ -149,10 +136,9 @@ export class ChatScene extends Phaser.Scene {
     const text = this.chunks[this.chunkIndex]
     const hasMore = this.chunkIndex < this.chunks.length - 1
 
-    const { height } = this.scale
-    const groundY = height - GROUND_Y_OFFSET
+    const boyBounds = this.boy.getBounds()
     const bubbleX = this.boy.x
-    const bubbleY = groundY - SPRITE_HEIGHT - BUBBLE_GAP
+    const bubbleY = boyBounds.top - BUBBLE_GAP
 
     if (this.bubble) {
       // Update position to follow boy, then show chunk
@@ -220,7 +206,7 @@ export class ChatScene extends Phaser.Scene {
 
     // Update bubble position if visible
     if (this.bubble) {
-      const bubbleY = groundY - SPRITE_HEIGHT - BUBBLE_GAP
+      const bubbleY = this.boy.getBounds().top - BUBBLE_GAP
       this.bubble.updatePosition(this.boy.x, bubbleY)
     }
   }

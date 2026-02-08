@@ -6,10 +6,6 @@ import {
   CanvasStatePatchSchema,
   CanvasStateSnapshotSchema,
 } from "./canvas"
-import {
-  SoulStageChangePayloadSchema,
-  SoulStateSnapshotPayloadSchema,
-} from "./soul"
 
 // ============================================================================
 // JSON-RPC 2.0 Base
@@ -292,28 +288,6 @@ export const CanvasStateSnapshotNotificationSchema = Schema.Struct({
 export type CanvasStateSnapshotNotification = Schema.Schema.Type<typeof CanvasStateSnapshotNotificationSchema>
 
 /**
- * Soul stage change notification (soul evolution event)
- */
-export const SoulStageChangeNotificationSchema = Schema.Struct({
-  jsonrpc: JsonRpcVersionSchema,
-  method: Schema.Literal("soul.stage_change"),
-  params: SoulStageChangePayloadSchema,
-})
-
-export type SoulStageChangeNotification = Schema.Schema.Type<typeof SoulStageChangeNotificationSchema>
-
-/**
- * Soul state snapshot notification (session restore/reconnect)
- */
-export const SoulStateSnapshotNotificationSchema = Schema.Struct({
-  jsonrpc: JsonRpcVersionSchema,
-  method: Schema.Literal("soul.state_snapshot"),
-  params: SoulStateSnapshotPayloadSchema,
-})
-
-export type SoulStateSnapshotNotification = Schema.Schema.Type<typeof SoulStateSnapshotNotificationSchema>
-
-/**
  * Union of all server notifications
  */
 export const ServerNotificationSchema = Schema.Union(
@@ -329,8 +303,6 @@ export const ServerNotificationSchema = Schema.Union(
   PoseChangeNotificationSchema,
   CanvasStatePatchNotificationSchema,
   CanvasStateSnapshotNotificationSchema,
-  SoulStageChangeNotificationSchema,
-  SoulStateSnapshotNotificationSchema
 )
 
 export type ServerNotification = Schema.Schema.Type<typeof ServerNotificationSchema>

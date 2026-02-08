@@ -9,8 +9,6 @@ import {
   createCanvasTools,
   type CanvasToolRuntime,
 } from "./canvas-tools"
-import { createSoulTools } from "./soul-tools"
-import type { SoulToolRuntime } from "../services/SoulStateService"
 import type { ResolvedAgentConfig } from "../agents/AgentConfig"
 import {
   TOOL_GROUPS,
@@ -25,7 +23,6 @@ const TOOL_GROUP_DESCRIPTIONS: Record<ToolGroupName, string> = {
   core: "Memory search, task suggestions, and character pose",
   web: "Web search and URL content fetching",
   canvas: "Pixel character builder — layers, colors, poses, animations",
-  soul: "Soul evolution trait observation and state",
   workspace: "File read/write/list for workspace context",
 }
 
@@ -33,7 +30,6 @@ const TOOL_GROUP_NAMES: Record<ToolGroupName, string[]> = {
   core: TOOL_GROUPS["group:core"],
   web: TOOL_GROUPS["group:web"],
   canvas: TOOL_GROUPS["group:canvas"],
-  soul: TOOL_GROUPS["group:soul"],
   workspace: TOOL_GROUPS["group:workspace"],
 }
 
@@ -54,7 +50,6 @@ function createGroupTools(
   getSessionMessages: () => ChatMessage[],
   sendPoseChange?: (pose: AgentPose) => void,
   canvasRuntime?: CanvasToolRuntime,
-  soulRuntime?: SoulToolRuntime
 ): AgentTool[] {
   switch (group) {
     case "core": {
@@ -77,8 +72,6 @@ function createGroupTools(
     }
     case "canvas":
       return canvasRuntime ? createCanvasTools(canvasRuntime) : []
-    case "soul":
-      return soulRuntime ? createSoulTools(soulRuntime) : []
     case "workspace":
       return createWorkspaceTools(config.id)
   }
@@ -93,7 +86,6 @@ export function createToolRegistry(
   getSessionMessages: () => ChatMessage[],
   sendPoseChange?: (pose: AgentPose) => void,
   canvasRuntime?: CanvasToolRuntime,
-  soulRuntime?: SoulToolRuntime
 ): ToolRegistry {
   const tools: AgentTool[] = []
 
@@ -143,16 +135,6 @@ export function createToolRegistry(
   if (canvasRuntime) {
     const canvasTools = createCanvasTools(canvasRuntime)
     for (const tool of canvasTools) {
-      if (shouldInclude(tool.name)) {
-        tools.push(tool)
-      }
-    }
-  }
-
-  // Add soul evolution tools (session-scoped)
-  if (soulRuntime) {
-    const soulTools = createSoulTools(soulRuntime)
-    for (const tool of soulTools) {
       if (shouldInclude(tool.name)) {
         tools.push(tool)
       }
@@ -210,7 +192,7 @@ export function createToolRegistry(
           if (loadedGroups.has(group)) continue
 
           // Actually instantiate tools for the requested group
-          const newTools = createGroupTools(group, agentConfig, getSessionMessages, sendPoseChange, canvasRuntime, soulRuntime)
+          const newTools = createGroupTools(group, agentConfig, getSessionMessages, sendPoseChange, canvasRuntime)
           const addedNames: string[] = []
           for (const tool of newTools) {
             if (!tools.some((t) => t.name === tool.name)) {
@@ -319,7 +301,6 @@ export { createMemorySearchTool, createMemoryGetTool } from "./memory-search"
 export { createWorkspaceTools } from "./workspace-tools"
 export { createSetCharacterPoseTool } from "./set-character-pose"
 export { createCanvasTools, type CanvasToolRuntime } from "./canvas-tools"
-export { createSoulTools } from "./soul-tools"
 export { compactToolResult, resetResultCounter } from "./tool-result-store"
 export {
   TOOL_GROUPS,

@@ -32,11 +32,9 @@ export function HomePage() {
   // Push agent config data to sidebar context
   useEffect(() => {
     setAgentConfigData({
-      soulState: wsChat.soulState,
-      soulStage: wsChat.soulStage ?? "orb",
       connectionState,
     });
-  }, [wsChat.soulState, wsChat.soulStage, connectionState, setAgentConfigData]);
+  }, [connectionState, setAgentConfigData]);
 
   // ------------------------------------------------------------------
   // Activity Log + Task List → Left Sidebar
@@ -83,8 +81,6 @@ export function HomePage() {
         canvasBlueprint={wsChat.canvasBlueprint}
         canvasVersion={wsChat.canvasVersion}
         lastCanvasOp={wsChat.lastCanvasOp}
-        soulState={wsChat.soulState}
-        soulStage={wsChat.soulStage}
       />
     </Suspense>
   );

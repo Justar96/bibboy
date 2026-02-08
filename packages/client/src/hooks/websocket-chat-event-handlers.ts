@@ -4,8 +4,6 @@ import type {
   AgentPose,
   CanvasCharacterBlueprint,
   CanvasOp,
-  SoulStage,
-  SoulState,
 } from "@bibboy/shared"
 import { isAgentPose } from "@bibboy/shared"
 import type { Dispatch, MutableRefObject, SetStateAction } from "react"
@@ -18,8 +16,6 @@ import {
 import {
   extractAssistantMessageContent,
   extractEventErrorMessage,
-  isSoulStage,
-  isSoulState,
   parseCanvasPatch,
   parseCanvasSnapshot,
   readNumber,
@@ -53,8 +49,6 @@ interface NotificationHandlerDeps {
   setCanvasVersion: Dispatch<SetStateAction<number | null>>
   setCanvasBlueprint: Dispatch<SetStateAction<CanvasCharacterBlueprint | null>>
   setLastCanvasOp: Dispatch<SetStateAction<CanvasOp | null>>
-  setSoulState: Dispatch<SetStateAction<SoulState | null>>
-  setSoulStage: Dispatch<SetStateAction<SoulStage | null>>
 }
 
 export function createResponseEventHandlers(
@@ -275,30 +269,6 @@ export function createNotificationHandlers(
         deps.setCanvasVersion(patch.version)
         deps.setCanvasBlueprint(patch.blueprint)
         deps.setLastCanvasOp(patch.op)
-      }
-    },
-    "soul.state_snapshot": (params) => {
-      const state = params.state
-      if (isSoulState(state)) {
-        deps.setSoulState(state)
-        deps.setSoulStage(state.stage)
-      }
-    },
-    "soul.stage_change": (params) => {
-      const stage = params.stage
-      if (isSoulStage(stage)) {
-        deps.setSoulStage(stage)
-        const interactionCount = readNumber(params.interactionCount)
-        deps.setSoulState((prev) =>
-          prev
-            ? {
-                ...prev,
-                stage,
-                interactionCount:
-                  interactionCount !== null ? interactionCount : prev.interactionCount,
-              }
-            : null
-        )
       }
     },
   }

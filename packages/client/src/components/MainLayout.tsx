@@ -62,8 +62,6 @@ export function MainLayout() {
     streamingContent: "",
   })
   const [agentConfigData, setAgentConfigData] = useState<AgentConfigContextValue>({
-    soulState: null,
-    soulStage: "orb",
     connectionState: "disconnected",
   })
   const [leftSidebarData, setLeftSidebarData] = useState<LeftSidebarData | null>(null)
@@ -105,15 +103,15 @@ export function MainLayout() {
   )
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
+    <div className="min-h-screen bg-paper-50">
       {/* Left Column - Fixed Sidebar with Activity Log + Tasks */}
-      <aside className="hidden lg:flex fixed left-0 top-0 w-[360px] h-screen bg-white border-r border-[#EBEBEB] z-40 flex-col">
+      <aside className="hidden lg:flex fixed left-0 top-0 w-[360px] h-screen bg-paper-100 border-r border-paper-300 z-40 flex-col">
         <LeftSidebar data={leftSidebarData} />
       </aside>
 
       {/* Right Column - Fixed Sidebar (constant width to prevent layout shift) */}
       <aside
-        className={`hidden xl:flex fixed right-0 top-0 w-[280px] h-screen bg-white border-l border-[#EBEBEB] z-40 flex-col overflow-y-auto overflow-x-hidden ${
+        className={`hidden xl:flex fixed right-0 top-0 w-[280px] h-screen bg-paper-100 border-l border-paper-300 z-40 flex-col overflow-y-auto overflow-x-hidden ${
           navContent ? "pt-[68px]" : ""
         }`}
       >
@@ -133,28 +131,28 @@ export function MainLayout() {
           /* Fallback: scroll progress indicator */
           <div className="flex-1 flex flex-col items-center pt-6 pb-12 pointer-events-none select-none">
             <div className="flex flex-col items-center">
-              <span className="font-mono text-[9px] text-[#AAAAAA] uppercase tracking-widest [writing-mode:vertical-lr] rotate-180 mb-8 font-medium">
+              <span className="font-mono text-[9px] text-ink-300 uppercase tracking-widest [writing-mode:vertical-lr] rotate-180 mb-8 font-medium">
                 Reading Progress
               </span>
               <div className="flex flex-col items-center gap-4">
-                <div className="w-px h-[240px] bg-[#F0F0F0] relative">
+                <div className="w-px h-[240px] bg-paper-300 relative">
                   <div
-                    className="w-px bg-[#0066CC] absolute top-0 transition-all duration-300"
+                    className="w-px bg-[#6B9FFF] absolute top-0 transition-all duration-300"
                     style={{ height: `${scrollProgress * 100}%` }}
                   />
                   <div
-                    className="w-2 h-2 rounded-full bg-[#0066CC] absolute -left-[3.5px] transition-all duration-300 shadow-[0_0_8px_rgba(0,102,204,0.3)]"
+                    className="w-2 h-2 rounded-full bg-[#6B9FFF] absolute -left-[3.5px] transition-all duration-300 shadow-[0_0_8px_rgba(107,159,255,0.3)]"
                     style={{ top: `${scrollProgress * 100}%` }}
                   />
                 </div>
-                <span className="font-mono text-[11px] text-[#0066CC] font-semibold tabular-nums mt-2">
+                <span className="font-mono text-[11px] text-[#6B9FFF] font-semibold tabular-nums mt-2">
                   {progressPercentage}%
                 </span>
               </div>
             </div>
             <div className="mt-auto flex flex-col gap-4 opacity-30">
               {Array.from({ length: 3 }, (_, i) => (
-                <div key={i} className="w-4 h-px bg-[#E0E0E0]" />
+                <div key={i} className="w-4 h-px bg-paper-300" />
               ))}
             </div>
           </div>
@@ -165,15 +163,15 @@ export function MainLayout() {
       {navContent && (
         <div
           className={`hidden lg:block fixed top-0 left-[360px] xl:right-[280px] right-0 z-30 px-6 lg:px-8 pt-3 pb-2 transition-all duration-200 ${
-            isScrolled ? "bg-[#FAFAFA]/95 backdrop-blur-sm" : "bg-[#FAFAFA]"
+            isScrolled ? "bg-paper-50/95 backdrop-blur-sm" : "bg-paper-50"
           }`}
         >
           <div className="max-w-[760px] mx-auto">
             <div
-              className={`bg-white border border-[#E8E8E8] rounded-sm transition-shadow duration-200 ${
+              className={`bg-paper-100 border border-paper-300 rounded-sm transition-shadow duration-200 ${
                 isScrolled
-                  ? "shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
-                  : "shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+                  ? "shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
+                  : "shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
               }`}
             >
               <div className="px-6 lg:px-8 py-2.5">{navContent}</div>
@@ -187,14 +185,14 @@ export function MainLayout() {
       {navContent && (
         <div
           className={`lg:hidden fixed top-14 left-0 right-0 z-30 px-4 pt-2 pb-2 transition-all duration-200 ${
-            isScrolled ? "bg-[#FAFAFA]/95 backdrop-blur-sm" : "bg-[#FAFAFA]"
+            isScrolled ? "bg-paper-50/95 backdrop-blur-sm" : "bg-paper-50"
           }`}
         >
           <div
-            className={`bg-white border border-[#E8E8E8] transition-shadow duration-200 ${
+            className={`bg-paper-100 border border-paper-300 transition-shadow duration-200 ${
               isScrolled
-                ? "shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
-                : "shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+                ? "shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
+                : "shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
             }`}
           >
             <div className="px-4 py-2">{navContent}</div>
@@ -214,7 +212,7 @@ export function MainLayout() {
       >
         <div className="max-w-[760px] mx-auto">
           {/* Main Content Paper Card - stable, never remounts */}
-          <div className="bg-white border border-[#E8E8E8] shadow-[0_1px_3px_rgba(0,0,0,0.04)] min-h-[calc(100vh-120px)] lg:min-h-[calc(100vh-98px)]">
+          <div className="bg-paper-100 border border-paper-300 shadow-[0_1px_3px_rgba(0,0,0,0.2)] min-h-[calc(100vh-120px)] lg:min-h-[calc(100vh-98px)]">
             <div className="px-6 sm:px-10 lg:px-14 py-6 sm:py-8 lg:py-10">
               {/* Only inner content animates */}
               <div key={location.pathname} className="content-enter">
@@ -226,11 +224,11 @@ export function MainLayout() {
       </main>
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-sm border-b border-[#EBEBEB] px-4 z-50 flex items-center">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-paper-100/95 backdrop-blur-sm border-b border-paper-300 px-4 z-50 flex items-center">
         <div className="flex items-center justify-between w-full">
           <PrefetchLink
             to="/"
-            className="font-mono text-[13px] font-semibold text-[#0066CC] uppercase tracking-[0.08em]"
+            className="font-mono text-[13px] font-semibold text-[#6B9FFF] uppercase tracking-[0.08em]"
           >
             {personalInfo.name}
           </PrefetchLink>
@@ -241,7 +239,7 @@ export function MainLayout() {
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[#666666] hover:text-[#0066CC] transition-colors"
+                className="text-ink-300 hover:text-[#6B9FFF] transition-colors"
                 aria-label={link.name}
               >
                 <link.icon className="w-4 h-4" />

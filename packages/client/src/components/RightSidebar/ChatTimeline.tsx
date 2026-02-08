@@ -91,10 +91,10 @@ export const ChatTimeline = memo(function ChatTimeline() {
   if (messages.length === 0 && !isTyping) {
     return (
       <div className="flex flex-col items-end pr-6 pt-6 h-full opacity-40">
-        <span className="font-mono text-[9px] text-[#AAAAAA] uppercase tracking-[0.15em]">
+        <span className="font-mono text-[9px] text-ink-300 uppercase tracking-[0.15em]">
           Timeline
         </span>
-        <div className="mt-4 mr-[14px] w-px h-12 bg-[#E8E8E8]" />
+        <div className="mt-4 mr-[14px] w-px h-12 bg-paper-300" />
       </div>
     )
   }
@@ -103,7 +103,7 @@ export const ChatTimeline = memo(function ChatTimeline() {
     <div ref={containerRef} className="relative h-full">
       {/* Label — right-aligned with timeline axis */}
       <span
-        className="absolute font-mono text-[9px] text-[#AAAAAA] uppercase tracking-[0.15em]"
+        className="absolute font-mono text-[9px] text-ink-300 uppercase tracking-[0.15em]"
         style={{
           right: TIMELINE_RIGHT - DOT_SIZE / 2,
           top: TIMELINE_TOP_OFFSET - 22,
@@ -114,7 +114,7 @@ export const ChatTimeline = memo(function ChatTimeline() {
 
       {/* Timeline vertical line — centered on dot axis */}
       <div
-        className="absolute w-px bg-[#E8E8E8]"
+        className="absolute w-px bg-paper-300"
         style={{
           right: TIMELINE_RIGHT,
           top: TIMELINE_TOP_OFFSET,
@@ -139,9 +139,9 @@ export const ChatTimeline = memo(function ChatTimeline() {
             <div
               className={`absolute rounded-full border-2 transition-all duration-200 ${
                 isUser
-                  ? "border-[#0066CC] bg-[#0066CC]"
-                  : "border-[#CCCCCC] bg-white"
-              } group-hover:border-[#0066CC] group-hover:scale-125 group-hover:shadow-[0_0_6px_rgba(0,102,204,0.3)]`}
+                  ? "border-[#6B9FFF] bg-[#6B9FFF]"
+                  : "border-ink-300 bg-paper-200"
+              } group-hover:border-[#6B9FFF] group-hover:scale-125 group-hover:shadow-[0_0_6px_rgba(107,159,255,0.3)]`}
               style={{
                 width: DOT_SIZE,
                 height: DOT_SIZE,
@@ -153,8 +153,8 @@ export const ChatTimeline = memo(function ChatTimeline() {
             {/* Horizontal connector line — extends left from the dot */}
             <div
               className={`absolute h-px transition-all duration-200 ${
-                isUser ? "bg-[#0066CC]/30" : "bg-[#E8E8E8]"
-              } group-hover:bg-[#0066CC]/60`}
+                isUser ? "bg-[#6B9FFF]/30" : "bg-paper-300"
+              } group-hover:bg-[#6B9FFF]/60`}
               style={{
                 width: CONNECTOR_W,
                 right: TIMELINE_RIGHT + DOT_SIZE / 2 + 2,
@@ -175,7 +175,7 @@ export const ChatTimeline = memo(function ChatTimeline() {
           }}
         >
           <div
-            className="rounded-full border-2 border-[#0066CC]/40 bg-[#0066CC]/20 animate-pulse"
+            className="rounded-full border-2 border-[#6B9FFF]/40 bg-[#6B9FFF]/20 animate-pulse"
             style={{ width: DOT_SIZE, height: DOT_SIZE }}
           />
         </div>
@@ -193,22 +193,22 @@ export const ChatTimeline = memo(function ChatTimeline() {
           right: TIMELINE_RIGHT + DOT_SIZE / 2 + CONNECTOR_W + 10,
         }}
       >
-        <div className="bg-white border border-[#E8E8E8] shadow-[0_2px_8px_rgba(0,0,0,0.08)] px-3 py-2 rounded-sm">
+        <div className="bg-paper-200 border border-paper-400 shadow-[0_2px_8px_rgba(0,0,0,0.3)] px-3 py-2 rounded-sm">
           {/* Role label */}
           <span
             className={`font-mono text-[8px] uppercase tracking-[0.15em] block mb-1 ${
-              tooltip.role === "user" ? "text-[#0066CC]" : "text-[#999999]"
+              tooltip.role === "user" ? "text-[#6B9FFF]" : "text-ink-400"
             }`}
           >
             {tooltip.role}
           </span>
           {/* Message preview */}
-          <p className="text-[11px] text-[#444444] leading-[1.5] break-words">
+          <p className="text-[11px] text-ink-600 leading-[1.5] break-words">
             {tooltip.content}
           </p>
         </div>
         {/* Arrow pointing right */}
-        <div className="absolute right-[-4px] top-3 w-2 h-2 bg-white border-r border-b border-[#E8E8E8] rotate-[-45deg]" />
+        <div className="absolute right-[-4px] top-3 w-2 h-2 bg-paper-200 border-r border-b border-paper-400 rotate-[-45deg]" />
       </div>
     </div>
   )

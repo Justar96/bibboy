@@ -38,7 +38,7 @@ function durationStr(start: number, end?: number): string {
 
 function StatusIcon({ status }: { status: ActivityAction["status"] }) {
   if (status === "running") {
-    return <SpinnerIcon className="w-3 h-3 animate-spin text-[#0066CC]" />
+    return <SpinnerIcon className="w-3 h-3 animate-spin text-[#6B9FFF]" />
   }
   if (status === "error") {
     return <ErrorIcon className="w-3 h-3 text-red-500" />
@@ -54,15 +54,15 @@ function ActionDetails({ action }: { action: ActivityAction }) {
   const hasDetails = action.details && Object.keys(action.details).length > 0
 
   return (
-    <div className="pl-5 pr-2 pb-2 text-[10px] font-mono text-[#888888] space-y-1">
+    <div className="pl-5 pr-2 pb-2 text-[10px] font-mono text-ink-400 space-y-1">
       <div className="flex items-center gap-2">
-        <span className="text-[#AAAAAA]">Duration:</span>
+        <span className="text-ink-300">Duration:</span>
         <span>{durationStr(action.startedAt, action.completedAt)}</span>
       </div>
       {hasDetails && (
         <div className="space-y-0.5">
-          <span className="text-[#AAAAAA]">Args:</span>
-          <pre className="text-[9px] leading-tight whitespace-pre-wrap break-all bg-[#FAFAFA] border border-[#F0F0F0] rounded-sm px-2 py-1 max-h-[120px] overflow-y-auto">
+          <span className="text-ink-300">Args:</span>
+          <pre className="text-[9px] leading-tight whitespace-pre-wrap break-all bg-paper-200 border border-paper-300 rounded-sm px-2 py-1 max-h-[120px] overflow-y-auto">
             {JSON.stringify(action.details, null, 2)}
           </pre>
         </div>
@@ -88,14 +88,14 @@ export const ActivityActionRow = memo(function ActivityActionRow({
       <button
         onClick={canExpand ? () => setExpanded((p) => !p) : undefined}
         className={`w-full flex items-center gap-1.5 px-2 py-1 text-left rounded-sm transition-colors ${
-          canExpand ? "hover:bg-[#F5F5F5] cursor-pointer" : "cursor-default"
+          canExpand ? "hover:bg-paper-200 cursor-pointer" : "cursor-default"
         }`}
       >
         <StatusIcon status={action.status} />
-        <span className="flex-1 font-mono text-[11px] text-[#555555] truncate">
+        <span className="flex-1 font-mono text-[11px] text-ink-500 truncate">
           {actionLabel(action)}
         </span>
-        <span className="font-mono text-[9px] text-[#BBBBBB] shrink-0">
+        <span className="font-mono text-[9px] text-ink-300 shrink-0">
           {relativeTime(action.startedAt)}
         </span>
       </button>

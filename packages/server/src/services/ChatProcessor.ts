@@ -8,7 +8,6 @@ import type {
   ChatMessage,
   CompactingNotification,
   PoseChangeNotification,
-  SoulStageChangeNotification,
 } from "@bibboy/shared"
 import { SessionNotFoundError } from "@bibboy/shared"
 import { ChatSessionManager } from "./ChatSessionManager"
@@ -25,7 +24,6 @@ import { createToolRegistry } from "../tools"
 import { extractAgentErrorMessage, extractErrorTag } from "./error-utils"
 import { getGlobalConfig, getGeminiApiKeyValue } from "../config"
 import { CanvasStateService } from "./CanvasStateService"
-import { getOrCreateSoulSession, type SoulStageChangeCallback } from "./SoulStateService"
 
 // ============================================================================
 // Types
@@ -130,24 +128,6 @@ export class ChatProcessor extends Effect.Service<ChatProcessor>()(
             },
           }
 
-          // Create soul evolution session with stage change callback
-          const onSoulStageChange: SoulStageChangeCallback = (payload) => {
-            const notification: SoulStageChangeNotification = {
-              jsonrpc: "2.0",
-              method: "soul.stage_change",
-              params: {
-                sessionId: payload.sessionId,
-                stage: payload.stage,
-                previousStage: payload.previousStage,
-                trigger: payload.trigger,
-                interactionCount: payload.interactionCount,
-              },
-            }
-            void Effect.runPromise(sendEvent(sessionId, notification).pipe(Effect.ignore))
-          }
-          const soulSession = getOrCreateSoulSession(sessionId, canvasRuntime, onSoulStageChange)
-          const soulRuntime = soulSession.createRuntime()
-
           let sessionMessages: ChatMessage[] = []
           const toolRegistry = resolvedAgent
             ? createToolRegistry(
@@ -155,7 +135,6 @@ export class ChatProcessor extends Effect.Service<ChatProcessor>()(
                 () => sessionMessages,
                 sendPoseChange,
                 canvasRuntime,
-                soulRuntime
               )
             : null
           const toolDefs = toolRegistry?.getDefinitions() ?? []
@@ -225,7 +204,6 @@ export class ChatProcessor extends Effect.Service<ChatProcessor>()(
             characterState,
             sendPoseChange,
             canvasRuntime,
-            soulRuntime
           )
 
           const streamState = createStreamEventState()

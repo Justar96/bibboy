@@ -60,11 +60,11 @@ const PlaygroundNav = memo(function PlaygroundNav({
       <div className="flex items-center gap-4">
         <PrefetchLink
           to="/"
-          className="font-mono text-[11px] text-[#999999] hover:text-[#0066CC] uppercase tracking-[0.1em] transition-colors"
+          className="font-mono text-[11px] text-ink-400 hover:text-[#6B9FFF] uppercase tracking-[0.1em] transition-colors"
         >
           Index
         </PrefetchLink>
-        <span className="font-mono text-[11px] text-[#1A1A1A] font-semibold uppercase tracking-[0.1em]">
+        <span className="font-mono text-[11px] text-ink-700 font-semibold uppercase tracking-[0.1em]">
           Playground
         </span>
       </div>
@@ -84,7 +84,7 @@ const PlaygroundNav = memo(function PlaygroundNav({
         {hasMessages && (
           <button
             onClick={onNewChat}
-            className="font-mono text-[11px] text-[#999999] hover:text-[#0066CC] uppercase tracking-[0.1em] transition-colors"
+            className="font-mono text-[11px] text-ink-400 hover:text-[#6B9FFF] uppercase tracking-[0.1em] transition-colors"
           >
             New Chat
           </button>
@@ -204,11 +204,9 @@ export function PlaygroundPage() {
   // Push agent config data to sidebar context
   useEffect(() => {
     setAgentConfigData({
-      soulState: wsChat.soulState,
-      soulStage: wsChat.soulStage ?? "orb",
       connectionState: USE_WEBSOCKET_CHAT ? wsChat.connectionState : "connected",
     });
-  }, [wsChat.soulState, wsChat.soulStage, wsChat.connectionState, setAgentConfigData]);
+  }, [wsChat.connectionState, setAgentConfigData]);
 
   // Keep ref in sync so we can snapshot before hook clears them
   useEffect(() => {
@@ -469,7 +467,7 @@ export function PlaygroundPage() {
               <button
                 key={prompt}
                 onClick={() => sendMessage(prompt)}
-                className="px-3 py-1.5 font-mono text-[11px] text-[#999999] hover:text-[#0066CC] bg-[#FAFAFA] hover:bg-[#F0F4FF] border border-[#E8E8E8] hover:border-[#0066CC]/30 rounded transition-all"
+                className="px-3 py-1.5 font-mono text-[11px] text-ink-400 hover:text-[#6B9FFF] bg-paper-200 hover:bg-paper-200/80 border border-paper-400 hover:border-[#6B9FFF]/30 rounded transition-all"
               >
                 {prompt}
               </button>

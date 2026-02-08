@@ -55,16 +55,6 @@
       "title": "Suggest",
       "detailKeys": ["suggestions"]
     },
-    "soul_observe_trait": {
-      "emoji": "👁️",
-      "title": "Observe Trait",
-      "detailKeys": ["trait", "strength"]
-    },
-    "soul_get_state": {
-      "emoji": "✨",
-      "title": "Soul State",
-      "detailKeys": []
-    },
     "canvas_get_state": {
       "emoji": "🖼️",
       "title": "Canvas State",

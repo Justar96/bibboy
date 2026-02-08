@@ -76,16 +76,16 @@ export function PhaserBuilderCanvas({
   return (
     <section className="mb-4 sm:mb-6">
       <div className="flex items-center justify-between mb-2">
-        <span className="font-mono text-[9px] text-[#CCCCCC] uppercase tracking-[0.2em]">
+        <span className="font-mono text-[9px] text-ink-300 uppercase tracking-[0.2em]">
           Realtime Sprite Builder
         </span>
-        <span className="font-mono text-[10px] text-[#999999]">
+        <span className="font-mono text-[10px] text-ink-400">
           {connectionState === "connected" ? "live" : connectionState}
         </span>
       </div>
       <div
         ref={containerRef}
-        className="relative mx-auto w-full h-[270px] sm:h-[300px] lg:h-[330px] border border-[#E8E8E8] rounded-md bg-[#FAFAFA]"
+        className="relative mx-auto w-full h-[270px] sm:h-[300px] lg:h-[330px] border border-paper-300 rounded-md bg-[#F0F0F2]"
       />
     </section>
   )

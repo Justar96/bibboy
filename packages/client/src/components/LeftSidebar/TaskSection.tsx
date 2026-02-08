@@ -23,13 +23,13 @@ interface TaskSectionProps {
 
 function TaskStatusIcon({ status }: { status: TaskStatus }) {
   if (status === "in-progress") {
-    return <SpinnerIcon className="w-3 h-3 animate-spin text-[#0066CC]" />;
+    return <SpinnerIcon className="w-3 h-3 animate-spin text-[#6B9FFF]" />;
   }
   if (status === "done") {
     return <CheckIcon className="w-3 h-3 text-emerald-500" />;
   }
   // pending — empty circle
-  return <div className="w-3 h-3 rounded-full border border-[#CCCCCC]" />;
+  return <div className="w-3 h-3 rounded-full border border-ink-300" />;
 }
 
 // ============================================================================
@@ -53,7 +53,7 @@ const TaskRow = memo(function TaskRow({
 
   return (
     <div
-      className={`group flex items-center gap-1.5 px-2 py-1 rounded-sm transition-colors hover:bg-[#F5F5F5] ${
+      className={`group flex items-center gap-1.5 px-2 py-1 rounded-sm transition-colors hover:bg-paper-200 ${
         task.status === "done" ? "opacity-40" : ""
       }`}
     >
@@ -64,7 +64,7 @@ const TaskRow = memo(function TaskRow({
       >
         <TaskStatusIcon status={task.status} />
       </button>
-      <span className="flex-1 font-mono text-[11px] text-[#555555] truncate">{task.text}</span>
+      <span className="flex-1 font-mono text-[11px] text-ink-500 truncate">{task.text}</span>
 
       {isAgentUnaccepted ? (
         <div className="flex items-center gap-1 shrink-0">
@@ -76,7 +76,7 @@ const TaskRow = memo(function TaskRow({
           </button>
           <button
             onClick={() => onDismiss(task.id)}
-            className="font-mono text-[9px] text-[#AAAAAA] hover:text-red-500 px-1"
+            className="font-mono text-[9px] text-ink-300 hover:text-red-400 px-1"
           >
             Dismiss
           </button>
@@ -87,7 +87,7 @@ const TaskRow = memo(function TaskRow({
           className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
           title="Delete task"
         >
-          <CloseIcon className="w-2.5 h-2.5 text-[#CCCCCC] hover:text-red-500" />
+          <CloseIcon className="w-2.5 h-2.5 text-ink-300 hover:text-red-400" />
         </button>
       )}
     </div>
@@ -141,12 +141,12 @@ export const TaskSection = memo(function TaskSection({
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-3 py-2 border-b border-[#F0F0F0] flex items-center gap-2 bg-white">
-        <span className="font-mono text-[10px] font-semibold text-[#888888] uppercase tracking-[0.08em]">
+      <div className="px-3 py-2 border-b border-paper-300 flex items-center gap-2 bg-paper-100">
+        <span className="font-mono text-[10px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
           Tasks
         </span>
         {pendingCount > 0 && (
-          <span className="font-mono text-[9px] font-semibold text-white bg-[#0066CC] rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+          <span className="font-mono text-[9px] font-semibold text-white bg-[#6B9FFF] rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
             {pendingCount}
           </span>
         )}
@@ -156,14 +156,14 @@ export const TaskSection = memo(function TaskSection({
             setIsAdding((prev) => !prev);
             setDraftTask("");
           }}
-          className="font-mono text-[10px] text-[#888888] hover:text-[#0066CC] transition-colors"
+          className="font-mono text-[10px] text-ink-400 hover:text-[#6B9FFF] transition-colors"
         >
           {isAdding ? "Cancel" : "+ Add"}
         </button>
       </div>
 
       {isAdding && (
-        <div className="px-2 py-2 border-b border-[#F0F0F0]">
+        <div className="px-2 py-2 border-b border-paper-300">
           <div className="flex items-center gap-1.5">
             <input
               type="text"
@@ -181,11 +181,11 @@ export const TaskSection = memo(function TaskSection({
               }}
               placeholder="Add a task..."
               autoFocus
-              className="flex-1 font-mono text-[11px] text-[#555555] border border-[#E5E5E5] bg-[#FAFAFA] rounded-sm px-2 py-1 outline-none focus:border-[#0066CC]"
+              className="flex-1 font-mono text-[11px] text-ink-600 border border-paper-400 bg-paper-200 rounded-sm px-2 py-1 outline-none focus:border-[#6B9FFF]"
             />
             <button
               onClick={submitTask}
-              className="font-mono text-[10px] text-[#0066CC] hover:text-[#0055AA] transition-colors"
+              className="font-mono text-[10px] text-[#6B9FFF] hover:text-[#8BB4FF] transition-colors"
             >
               Save
             </button>
@@ -195,7 +195,7 @@ export const TaskSection = memo(function TaskSection({
 
       {sorted.length === 0 ? (
         <div className="flex-1 px-2 py-4 text-center">
-          <span className="font-mono text-[10px] text-[#CCCCCC]">No tasks yet</span>
+          <span className="font-mono text-[10px] text-ink-300">No tasks yet</span>
         </div>
       ) : (
         <div className={`${listMaxHeightClass} overflow-y-auto space-y-px sidebar-scroll`}>

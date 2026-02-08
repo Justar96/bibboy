@@ -21,7 +21,6 @@ import {
   type ToolExecutionContext,
   createToolExecutionMetrics,
 } from "../tools"
-import type { SoulToolRuntime } from "./SoulStateService"
 import {
   agentConfig,
   initializeAgentConfig,
@@ -456,7 +455,6 @@ export function createAgentServiceLive(
   characterState?: CharacterState,
   sendPoseChange?: (pose: AgentPose) => void,
   canvasRuntime?: CanvasToolRuntime,
-  soulRuntime?: SoulToolRuntime
 ): AgentServiceInterface {
   const getResolvedConfig = (request: AgentRequest) =>
     agentId
@@ -471,7 +469,6 @@ export function createAgentServiceLive(
         getSessionMessages,
         sendPoseChange,
         canvasRuntime,
-        soulRuntime
       )
       return runAgent(request, resolvedConfig, toolRegistry, characterState)
     },
@@ -482,7 +479,6 @@ export function createAgentServiceLive(
         getSessionMessages,
         sendPoseChange,
         canvasRuntime,
-        soulRuntime
       )
       return runAgentStream(request, resolvedConfig, toolRegistry, characterState)
     },
@@ -493,7 +489,6 @@ export function createAgentServiceLive(
         getSessionMessages,
         sendPoseChange,
         canvasRuntime,
-        soulRuntime
       )
       return streamToAsyncGenerator(runAgentStream(request, resolvedConfig, toolRegistry, characterState))
     },

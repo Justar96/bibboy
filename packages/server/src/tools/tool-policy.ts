@@ -22,7 +22,6 @@ const BASE_TOOL_GROUPS: Record<Exclude<ToolGroupKey, "group:all">, string[]> = {
     "canvas_adjust_color", "canvas_set_layer_visibility", "canvas_cycle_variant",
     "canvas_import_blueprint",
   ],
-  "group:soul": ["soul_observe_trait", "soul_get_state"],
   "group:workspace": ["read_file", "write_file", "list_files"],
 }
 
@@ -44,7 +43,7 @@ function isToolGroupKey(value: string): value is ToolGroupKey {
 export const TOOL_PROFILES: Record<ToolProfileName, string[]> = {
   minimal: ["group:core"],
   coding: ["group:core", "group:web", "group:workspace"],
-  messaging: ["group:core", "group:web", "group:canvas", "group:soul", "request_tools"],
+  messaging: ["group:core", "group:web", "group:canvas", "request_tools"],
   full: [], // Empty = all tools allowed
 }
 

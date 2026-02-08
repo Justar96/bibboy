@@ -21,7 +21,7 @@ export function TypingIndicator() {
     >
       {/* Thinking text with subtle pulse */}
       <motion.span 
-        className="text-[13px] text-[#999999] italic"
+        className="text-[13px] text-ink-400 italic"
         animate={{ opacity: [0.5, 0.8, 0.5] }}
         transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
       >
@@ -33,7 +33,7 @@ export function TypingIndicator() {
         {[0, 1, 2].map((i) => (
           <motion.span
             key={i}
-            className="w-1.5 h-1.5 rounded-full bg-[#AAAAAA]"
+            className="w-1.5 h-1.5 rounded-full bg-ink-400"
             animate={{
               y: [0, -3, 0],
               opacity: [0.4, 1, 0.4],
@@ -51,13 +51,13 @@ export function TypingIndicator() {
       
       {/* Subtle shimmer line */}
       <motion.div 
-        className="ml-1 h-px w-12 rounded-full overflow-hidden bg-[#E8E8E8]"
+        className="ml-1 h-px w-12 rounded-full overflow-hidden bg-paper-300"
         initial={{ opacity: 0, width: 0 }}
         animate={{ opacity: 1, width: 48 }}
         transition={{ delay: 0.3, ...SPRING }}
       >
         <motion.div
-          className="h-full w-1/2 bg-gradient-to-r from-transparent via-[#999999] to-transparent"
+          className="h-full w-1/2 bg-gradient-to-r from-transparent via-ink-400 to-transparent"
           animate={{ x: [-24, 48] }}
           transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
         />

@@ -23,27 +23,27 @@ export const MobileActivityPanel = memo(function MobileActivityPanel({
   );
 
   return (
-    <div className="lg:hidden border-b border-[#EBEBEB] bg-white">
+    <div className="lg:hidden border-b border-paper-300 bg-paper-100">
       {/* Summary bar */}
       <button
         onClick={() => setExpanded((p) => !p)}
-        className="w-full flex items-center gap-2 px-4 py-2 hover:bg-[#FAFAFA] transition-colors"
+        className="w-full flex items-center gap-2 px-4 py-2 hover:bg-paper-200 transition-colors"
       >
         <ChevronIcon
-          className={`w-3 h-3 text-[#AAAAAA] transition-transform duration-200 ${
+          className={`w-3 h-3 text-ink-300 transition-transform duration-200 ${
             expanded ? "rotate-90" : ""
           }`}
         />
-        <span className="font-mono text-[10px] font-semibold text-[#888888] uppercase tracking-[0.08em]">
+        <span className="font-mono text-[10px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
           Activity
         </span>
         {runningCount > 0 && (
-          <span className="font-mono text-[9px] font-semibold text-white bg-[#0066CC] rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+          <span className="font-mono text-[9px] font-semibold text-white bg-[#6B9FFF] rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
             {runningCount}
           </span>
         )}
         {data.pendingCount > 0 && (
-          <span className="ml-1 font-mono text-[9px] text-[#888888]">
+          <span className="ml-1 font-mono text-[9px] text-ink-400">
             {data.pendingCount} task{data.pendingCount !== 1 ? "s" : ""}
           </span>
         )}
@@ -55,11 +55,11 @@ export const MobileActivityPanel = memo(function MobileActivityPanel({
           expanded ? "max-h-[76vh]" : "max-h-0"
         }`}
       >
-        <div className="border-t border-[#F0F0F0] h-[min(72vh,560px)] flex flex-col">
+        <div className="border-t border-paper-300 h-[min(72vh,560px)] flex flex-col">
           <div className="flex-1 min-h-0 overflow-y-auto sidebar-scroll">
             <ActivitySection groups={data.activityGroups} listMaxHeightClass="max-h-none" />
           </div>
-          <div className="shrink-0 h-56 border-t border-[#EBEBEB] overflow-y-auto sidebar-scroll">
+          <div className="shrink-0 h-56 border-t border-paper-300 overflow-y-auto sidebar-scroll">
             <TaskSection
               tasks={data.tasks}
               pendingCount={data.pendingCount}

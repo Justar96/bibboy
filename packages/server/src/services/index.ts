@@ -34,14 +34,4 @@ export {
   type CanvasSnapshot,
 } from "./CanvasStateService"
 
-export {
-  SoulSession,
-  getOrCreateSoulSession,
-  getSoulSession,
-  clearSoulSession,
-  pruneSoulSessions,
-  type SoulStageChangeCallback,
-  type SoulToolRuntime,
-} from "./SoulStateService"
-
 export { extractAgentErrorMessage } from "./error-utils"

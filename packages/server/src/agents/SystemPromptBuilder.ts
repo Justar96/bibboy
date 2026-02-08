@@ -314,29 +314,6 @@ export function buildAgentSystemPrompt(params: SystemPromptOptions): string {
     lines.push("")
   }
 
-  // Soul evolution guidance
-  if (availableTools.has("soul_observe_trait")) {
-    lines.push("## Soul Evolution")
-    lines.push("You have a soul evolution system that visually transforms the pixel character based on the user's personality.")
-    lines.push("Use soul_observe_trait when you genuinely notice a personality trait during conversation:")
-    lines.push("- curious: asking questions, exploring ideas, wanting to learn")
-    lines.push("- creative: imagination, novel ideas, artistic expression")
-    lines.push("- analytical: logical thinking, problem-solving, precision")
-    lines.push("- playful: humor, games, light-heartedness")
-    lines.push("- calm: patience, reflection, thoughtfulness")
-    lines.push("- energetic: enthusiasm, excitement, fast-paced")
-    lines.push("- empathetic: caring, understanding, emotional awareness")
-    lines.push("- bold: confidence, directness, risk-taking")
-    lines.push("")
-    lines.push("Guidelines:")
-    lines.push("- Don't call soul_observe_trait every message — only when a trait is clearly expressed (roughly every 3-5 messages).")
-    lines.push("- Set strength 0.3-0.5 for mild expressions, 0.6-0.8 for strong ones, 0.9-1.0 for defining moments.")
-    lines.push("- When the character evolves to a new stage, briefly acknowledge it: \"oh, looks like you're starting to take shape\" or similar.")
-    lines.push("- Never tell the user you're \"observing their personality\" — just let it happen naturally.")
-    lines.push("- The character evolves through stages: orb → nascent → forming → awakened → evolved.")
-    lines.push("")
-  }
-
   // Fresh data awareness
   if (availableTools.has("web_search")) {
     lines.push("## Fresh Data Awareness")

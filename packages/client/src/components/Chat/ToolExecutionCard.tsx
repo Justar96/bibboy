@@ -361,7 +361,7 @@ export function ToolExecutionCard({
             transition={SMOOTH}
             className="overflow-hidden"
           >
-            <div className="px-3 py-1.5 border-t border-current/10 bg-white/30">
+            <div className="px-3 py-1.5 border-t border-current/10 bg-black/20">
               <pre className="text-[11px] leading-snug text-ink-500 font-mono truncate whitespace-pre overflow-hidden max-h-[3rem]">
                 {tool.rawArguments.length > 200
                   ? tool.rawArguments.slice(0, 200) + "…"
@@ -382,7 +382,7 @@ export function ToolExecutionCard({
             transition={SMOOTH}
             className="overflow-hidden"
           >
-            <div className="px-3 py-2 border-t border-current/10 bg-white/50 text-xs">
+            <div className="px-3 py-2 border-t border-current/10 bg-black/20 text-xs">
               <ToolResultContent toolName={tool.name} result={tool.result} />
             </div>
           </motion.div>
@@ -396,7 +396,7 @@ export function ToolExecutionCard({
             transition={SMOOTH}
             className="overflow-hidden"
           >
-            <div className="px-3 py-2 border-t border-current/10 bg-white/50 text-xs text-red-600">
+            <div className="px-3 py-2 border-t border-current/10 bg-black/20 text-xs text-red-400">
               {tool.result.error}
             </div>
           </motion.div>

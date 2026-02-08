@@ -5,7 +5,6 @@ import {
   ClientMessageSchema,
   JSON_RPC_ERRORS,
   type CanvasStateSnapshotNotification,
-  type SoulStateSnapshotNotification,
   type ClientMessage,
   type JsonRpcSuccessResponse,
   type JsonRpcErrorResponse,
@@ -21,7 +20,6 @@ import {
   CanvasStateService,
   CanvasStateServiceLive,
 } from "../services/CanvasStateService"
-import { getSoulSession, pruneSoulSessions } from "../services/SoulStateService"
 
 // ============================================================================
 // Service Layer
@@ -222,19 +220,6 @@ export const websocketHandlers = {
           ws.send(JSON.stringify(notification))
         }
 
-        // Send soul state snapshot for rehydration if available
-        const soulSession = getSoulSession(sessionId)
-        if (soulSession) {
-          const soulNotification: SoulStateSnapshotNotification = {
-            jsonrpc: "2.0",
-            method: "soul.state_snapshot",
-            params: {
-              sessionId,
-              state: soulSession.getState(),
-            },
-          }
-          ws.send(JSON.stringify(soulNotification))
-        }
       } else {
         // New session
         console.log(`[WebSocket] Creating new session: ${sessionId}`)
@@ -374,7 +359,6 @@ export function startSessionCleanup(intervalMs: number = 10_000): void {
       const canvasState = yield* CanvasStateService
       const activeSessionIds = yield* sessionManager.listSessionIds()
       yield* canvasState.pruneSessions(activeSessionIds)
-      pruneSoulSessions(activeSessionIds)
     })
 
     await runEffect(effect)

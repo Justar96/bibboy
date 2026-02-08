@@ -1,12 +1,8 @@
 import {
-  PERSONALITY_TRAITS,
-  SOUL_STAGES,
   type CanvasCharacterBlueprint,
   type CanvasOp,
   type JsonRpcErrorResponse,
   type JsonRpcSuccessResponse,
-  type SoulStage,
-  type SoulState,
 } from "@bibboy/shared"
 import {
   isCanvasBlueprint,
@@ -21,10 +17,6 @@ export function readString(value: unknown): string | null {
 
 export function readNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null
-}
-
-export function isSoulStage(value: unknown): value is SoulStage {
-  return typeof value === "string" && SOUL_STAGES.includes(value as SoulStage)
 }
 
 export function isJsonRpcErrorResponse(value: unknown): value is JsonRpcErrorResponse {
@@ -45,31 +37,6 @@ export function isJsonRpcSuccessResponse(value: unknown): value is JsonRpcSucces
 export function readResultMessageId(value: unknown): string | null {
   if (!isJsonRecord(value)) return null
   return readString(value.messageId)
-}
-
-export function isSoulState(value: unknown): value is SoulState {
-  if (!isJsonRecord(value)) return false
-  if (!isSoulStage(value.stage)) return false
-  if (readNumber(value.interactionCount) === null) return false
-
-  if (!isJsonRecord(value.traits)) return false
-  for (const [key, traitValue] of Object.entries(value.traits)) {
-    if (!PERSONALITY_TRAITS.includes(key as (typeof PERSONALITY_TRAITS)[number])) {
-      return false
-    }
-    if (readNumber(traitValue) === null) {
-      return false
-    }
-  }
-
-  if (!Array.isArray(value.history)) return false
-  for (const item of value.history) {
-    if (!isJsonRecord(item)) return false
-    if (!isSoulStage(item.fromStage) || !isSoulStage(item.toStage)) return false
-    if (readString(item.trigger) === null || readNumber(item.timestamp) === null) return false
-  }
-
-  return true
 }
 
 export function extractAssistantMessageContent(output: unknown, fallback: string): string {
