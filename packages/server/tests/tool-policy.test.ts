@@ -113,10 +113,10 @@ describe("makeToolPolicyMatcher", () => {
 
   it("supports wildcard deny", () => {
     const matcher = makeToolPolicyMatcher({
-      deny: ["canvas_*"],
+      deny: ["web_*"],
     })
-    expect(matcher("canvas_set_pose")).toBe(false)
-    expect(matcher("web_search")).toBe(true)
+    expect(matcher("web_search")).toBe(false)
+    expect(matcher("memory_search")).toBe(true)
   })
 
   it("supports group:* in allow", () => {
@@ -233,7 +233,7 @@ describe("resolveEffectivePolicy", () => {
     })
     expect(matcher("memory_search")).toBe(true)
     expect(matcher("web_search")).toBe(true)
-    expect(matcher("canvas_set_pose")).toBe(false)
+    expect(matcher("read_file")).toBe(false)
   })
 
   it("deny works with full profile", () => {
@@ -241,10 +241,10 @@ describe("resolveEffectivePolicy", () => {
       profile: "full",
       allow: [],
       alsoAllow: [],
-      deny: ["canvas_*"],
+      deny: ["read_*"],
     })
     expect(matcher("web_search")).toBe(true)
-    expect(matcher("canvas_set_pose")).toBe(false)
+    expect(matcher("read_file")).toBe(false)
   })
 
   it("deny overrides explicit allow (deny-first)", () => {
@@ -265,7 +265,7 @@ describe("resolveEffectivePolicy", () => {
 
 describe("filterToolsByPolicy", () => {
   it("filters tools by allow list", () => {
-    const tools = ["web_search", "web_fetch", "memory_search", "canvas_set_pose"]
+    const tools = ["web_search", "web_fetch", "memory_search", "read_file"]
     const result = filterToolsByPolicy(tools, { allow: ["group:web"] })
     expect(result).toEqual(["web_search", "web_fetch"])
   })
@@ -304,9 +304,9 @@ describe("TOOL_PROFILES", () => {
     expect(TOOL_PROFILES.full).toEqual([])
   })
 
-  it("messaging profile includes canvas group", () => {
+  it("messaging profile includes core group", () => {
     const expanded = expandToolGroups(TOOL_PROFILES.messaging)
-    expect(expanded).toContain("canvas_set_pose")
+    expect(expanded).toContain("memory_search")
   })
 })
 

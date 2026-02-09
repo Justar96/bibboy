@@ -1,10 +1,9 @@
 # Bibboy
 
-An AI-powered soul companion with a pixel character that evolves as it learns about you through conversation.
+An AI-powered soul companion with a pixel character that lives alongside you through conversation.
 
 ## Features
 
-- **Soul Evolution** - Character starts as a minimal orb and evolves through 5 stages based on personality traits observed during conversation
 - **Phaser 3 Canvas** - Pixel art character rendered with layered sprites, animations, and visual transitions
 - **AI Agent Chat** - Gemini-powered conversational agent with memory, web search, and workspace tools
 - **WebSocket Real-Time** - JSON-RPC 2.0 protocol for streaming chat and live canvas updates
@@ -77,20 +76,6 @@ bun run test:coverage    # Coverage report
 # Linting
 bun run lint             # ESLint
 ```
-
-## Soul Evolution
-
-The character evolves through 5 stages as the agent observes personality traits:
-
-| Stage    | Interactions | Visual                                    |
-| -------- | ------------ | ----------------------------------------- |
-| Orb      | 0-2          | Monochrome, closed eyes, minimal          |
-| Nascent  | 3-7          | Eyes open, first colors appear            |
-| Forming  | 8-15         | Hair/outfit variants, personalized colors |
-| Awakened | 16-30        | Accessories, expressive eyes, animations  |
-| Evolved  | 30+          | Fully personalized character              |
-
-Personality traits (curious, creative, analytical, playful, calm, energetic, empathetic, bold) influence visual choices like colors, hair style, outfit, and accessories.
 
 ## Environment Variables
 

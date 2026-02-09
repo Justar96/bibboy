@@ -159,7 +159,7 @@ export function initializeAgentConfig(): void {
     list: [
       {
         id: "default",
-        name: "Soul Companion",
+        name: "Bibboy",
         default: true,
         tools: { profile: "messaging" },
       },

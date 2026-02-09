@@ -14,7 +14,6 @@ export const CHARACTER_STATES = [
   "talking",
   "sitting",
   "sleeping",
-  "celebrating",
   "yawning",
   "phoneChecking",
   "reading",
@@ -23,7 +22,6 @@ export const CHARACTER_STATES = [
   "stretching",
   "drinkingCoffee",
   "exercising",
-  "dancing",
   "meditating",
 ] as const
 
@@ -41,9 +39,7 @@ export const AGENT_POSES = [
   "stretching",
   "drinkingCoffee",
   "exercising",
-  "dancing",
   "meditating",
-  "celebrating",
   "sleeping",
 ] as const
 

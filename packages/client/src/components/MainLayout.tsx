@@ -61,10 +61,13 @@ export function MainLayout() {
     isTyping: false,
     streamingContent: "",
   })
+  const [leftSidebarData, setLeftSidebarData] = useState<LeftSidebarData | null>(null)
   const [agentConfigData, setAgentConfigData] = useState<AgentConfigContextValue>({
     connectionState: "disconnected",
   })
-  const [leftSidebarData, setLeftSidebarData] = useState<LeftSidebarData | null>(null)
+
+  /* Agent config data is memoized to prevent unnecessary RightSidebar re-renders */
+  const agentConfigDataValue = useMemo<AgentConfigContextValue>(() => agentConfigData, [agentConfigData])
 
   // Track scroll progress for the progress indicator
   useEffect(() => {
@@ -122,7 +125,7 @@ export function MainLayout() {
             </div>
           </ChatDataContext.Provider>
         ) : sidebarMode.type === "agent-config" ? (
-          <AgentConfigContext.Provider value={agentConfigData}>
+          <AgentConfigContext.Provider value={agentConfigDataValue}>
             <div className="flex-1 min-h-0">
               <AgentConfigPanel />
             </div>

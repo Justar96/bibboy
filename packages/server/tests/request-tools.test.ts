@@ -55,19 +55,19 @@ describe("request_tools", () => {
     if (!requestTools) return
 
     const first = await requestTools.execute("tc_1", {
-      groups: "canvas,not_a_group",
+      groups: "workspace,not_a_group",
     })
     const firstPayload = parseRequestToolsPayload(first)
-    expect(firstPayload.loaded).toEqual(["canvas"])
+    expect(firstPayload.loaded).toEqual(["workspace"])
     expect(firstPayload.alreadyLoaded).toEqual([])
     expect(firstPayload.invalidGroups).toEqual(["not_a_group"])
 
     const second = await requestTools.execute("tc_2", {
-      groups: "canvas,still_invalid",
+      groups: "workspace,still_invalid",
     })
     const secondPayload = parseRequestToolsPayload(second)
     expect(secondPayload.loaded).toEqual([])
-    expect(secondPayload.alreadyLoaded).toEqual(["canvas"])
+    expect(secondPayload.alreadyLoaded).toEqual(["workspace"])
     expect(secondPayload.invalidGroups).toEqual(["still_invalid"])
   })
 })

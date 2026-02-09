@@ -17,7 +17,6 @@ import {
 import {
   createToolRegistry,
   type ToolRegistry,
-  type CanvasToolRuntime,
   type ToolExecutionContext,
   createToolExecutionMetrics,
 } from "../tools"
@@ -454,7 +453,6 @@ export function createAgentServiceLive(
   agentId?: string,
   characterState?: CharacterState,
   sendPoseChange?: (pose: AgentPose) => void,
-  canvasRuntime?: CanvasToolRuntime,
 ): AgentServiceInterface {
   const getResolvedConfig = (request: AgentRequest) =>
     agentId
@@ -468,7 +466,6 @@ export function createAgentServiceLive(
         resolvedConfig,
         getSessionMessages,
         sendPoseChange,
-        canvasRuntime,
       )
       return runAgent(request, resolvedConfig, toolRegistry, characterState)
     },
@@ -478,7 +475,6 @@ export function createAgentServiceLive(
         resolvedConfig,
         getSessionMessages,
         sendPoseChange,
-        canvasRuntime,
       )
       return runAgentStream(request, resolvedConfig, toolRegistry, characterState)
     },
@@ -488,7 +484,6 @@ export function createAgentServiceLive(
         resolvedConfig,
         getSessionMessages,
         sendPoseChange,
-        canvasRuntime,
       )
       return streamToAsyncGenerator(runAgentStream(request, resolvedConfig, toolRegistry, characterState))
     },

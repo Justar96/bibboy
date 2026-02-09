@@ -26,12 +26,4 @@ export {
   type ChatProcessorInterface,
 } from "./ChatProcessor"
 
-export {
-  CanvasStateService,
-  CanvasStateServiceLive,
-  type CanvasStateServiceInterface,
-  type CanvasApplyResult,
-  type CanvasSnapshot,
-} from "./CanvasStateService"
-
 export { extractAgentErrorMessage } from "./error-utils"

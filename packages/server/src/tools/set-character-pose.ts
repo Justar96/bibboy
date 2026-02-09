@@ -23,7 +23,7 @@ export function createSetCharacterPoseTool(
     label: "Set Character Pose",
     name: "set_character_pose",
     description:
-      "Change the pixel avatar's pose or activity. Use this when a pose change fits the conversation naturally — e.g. celebrating after good news, meditating when the user asks about mindfulness, or dancing when the mood calls for it.",
+      "Change the pixel avatar's pose or activity. Use this when a pose change fits the conversation naturally — e.g. meditating when the user asks about mindfulness, or stretching after a long session.",
     parameters: {
       type: "object",
       properties: {

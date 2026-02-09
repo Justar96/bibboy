@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo, memo, lazy, Suspense } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo, memo } from "react";
 import type { ChatMessage as ChatMessageType } from "@bibboy/shared";
 import { ChatThread, ChatInput, ToolOutputSidebar } from "@/components/Chat";
 import type { SidebarContent, ChatQueueItem } from "@/components/Chat";
@@ -13,10 +13,6 @@ import { useLayoutNav } from "@/components/MainLayout";
 import { SIDEBAR_AGENT_CONFIG } from "@/components/RightSidebar";
 import type { LeftSidebarData } from "@/components/LeftSidebar";
 import { PrefetchLink } from "@/components/PrefetchLink";
-
-const PhaserBuilderCanvas = lazy(() =>
-  import("@bibboy/phaser-chat").then((m) => ({ default: m.PhaserBuilderCanvas })),
-);
 
 // ============================================================================
 // Config
@@ -408,17 +404,6 @@ export function PlaygroundPage() {
 
   return (
     <section className="min-h-[calc(100vh-200px)] lg:min-h-[calc(100vh-180px)] flex flex-col">
-      {USE_WEBSOCKET_CHAT && (
-        <Suspense fallback={<div className="w-full h-[270px] mb-4 sm:mb-6" />}>
-          <PhaserBuilderCanvas
-            blueprint={wsChat.canvasBlueprint}
-            version={wsChat.canvasVersion}
-            lastOp={wsChat.lastCanvasOp}
-            connectionState={wsChat.connectionState}
-          />
-        </Suspense>
-      )}
-
       {/* Messages + Sidebar split container */}
       <div className={`flex-1 flex ${sidebarContent ? "gap-0" : ""}`}>
         {/* Main chat area */}

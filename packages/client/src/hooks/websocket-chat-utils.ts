@@ -1,6 +1,4 @@
 import type {
-  CanvasCharacterBlueprint,
-  CanvasOp,
   ToolExecutionResult,
 } from "@bibboy/shared"
 
@@ -156,51 +154,6 @@ export function safeJsonParseObject(
   return parsed
 }
 
-function isLayerShape(value: unknown): value is { variant: string; color: string } {
-  if (!value || typeof value !== "object") return false
-  const layer = value as { variant?: unknown; color?: unknown }
-  return typeof layer.variant === "string" && typeof layer.color === "string"
-}
-
-export function isCanvasBlueprint(value: unknown): value is CanvasCharacterBlueprint {
-  if (!value || typeof value !== "object") return false
-  const data = value as {
-    entityId?: unknown
-    palettePreset?: unknown
-    pose?: unknown
-    animation?: unknown
-    layers?: unknown
-  }
-  if (
-    typeof data.entityId !== "string" ||
-    typeof data.palettePreset !== "string" ||
-    typeof data.pose !== "string" ||
-    typeof data.animation !== "string"
-  ) {
-    return false
-  }
-  const layers = data.layers as {
-    body?: unknown
-    hair?: unknown
-    eyes?: unknown
-    outfit?: unknown
-    accessory?: unknown
-  } | undefined
-  return Boolean(
-    layers &&
-    isLayerShape(layers.body) &&
-    isLayerShape(layers.hair) &&
-    isLayerShape(layers.eyes) &&
-    isLayerShape(layers.outfit) &&
-    isLayerShape(layers.accessory)
-  )
-}
-
-export function isCanvasOp(value: unknown): value is CanvasOp {
-  if (!value || typeof value !== "object") return false
-  const op = value as { type?: unknown }
-  return typeof op.type === "string"
-}
 
 /**
  * Calculate reconnection delay with exponential backoff.

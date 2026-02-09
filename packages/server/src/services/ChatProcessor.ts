@@ -2,8 +2,6 @@ import { Effect, Stream, Option, Fiber, Ref, HashMap } from "effect"
 import type {
   AgentPose,
   AgentStreamEvent,
-  CanvasOp,
-  CanvasStatePatchNotification,
   CharacterState,
   ChatMessage,
   CompactingNotification,
@@ -23,7 +21,6 @@ import { agentConfig } from "../agents/AgentConfig"
 import { createToolRegistry } from "../tools"
 import { extractAgentErrorMessage, extractErrorTag } from "./error-utils"
 import { getGlobalConfig, getGeminiApiKeyValue } from "../config"
-import { CanvasStateService } from "./CanvasStateService"
 
 // ============================================================================
 // Types
@@ -62,8 +59,6 @@ export class ChatProcessor extends Effect.Service<ChatProcessor>()(
   {
     effect: Effect.gen(function* () {
       const sessionManager = yield* ChatSessionManager
-      const canvasState = yield* CanvasStateService
-
       // Track active streams per session for cancellation
       const activeStreamsRef = yield* Ref.make<HashMap.HashMap<string, ActiveStream>>(
         HashMap.empty()
@@ -110,31 +105,12 @@ export class ChatProcessor extends Effect.Service<ChatProcessor>()(
             )
           }
 
-          const canvasRuntime = {
-            sessionId,
-            getState: async () =>
-              Effect.runPromise(canvasState.ensureSession(sessionId)),
-            applyOperation: async (op: CanvasOp) =>
-              Effect.runPromise(canvasState.applyOperation(sessionId, op)),
-            exportBlueprint: async () =>
-              Effect.runPromise(canvasState.exportBlueprint(sessionId)),
-            emitPatch: (payload: CanvasStatePatchNotification["params"]) => {
-              const notification: CanvasStatePatchNotification = {
-                jsonrpc: "2.0",
-                method: "canvas.state_patch",
-                params: payload,
-              }
-              void Effect.runPromise(sendEvent(sessionId, notification).pipe(Effect.ignore))
-            },
-          }
-
           let sessionMessages: ChatMessage[] = []
           const toolRegistry = resolvedAgent
             ? createToolRegistry(
                 resolvedAgent,
                 () => sessionMessages,
                 sendPoseChange,
-                canvasRuntime,
               )
             : null
           const toolDefs = toolRegistry?.getDefinitions() ?? []
@@ -203,7 +179,6 @@ export class ChatProcessor extends Effect.Service<ChatProcessor>()(
             agentId,
             characterState,
             sendPoseChange,
-            canvasRuntime,
           )
 
           const streamState = createStreamEventState()

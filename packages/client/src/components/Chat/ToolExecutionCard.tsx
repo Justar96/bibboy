@@ -162,7 +162,7 @@ export function ToolExecutionCard({
   const [wasRunning, setWasRunning] = useState(tool.status === "running")
   const [showCheckmark, setShowCheckmark] = useState(false)
 
-  const display = resolveToolDisplay({ name: tool.name, args: tool.arguments })
+  const display = resolveToolDisplay({ name: tool.name, args: tool.arguments, status: tool.status })
   const statusColor = getToolStatusColor(tool.name, tool.status)
   const elapsed = useElapsedTime(tool.startedAt, tool.status === "running")
 
@@ -226,7 +226,7 @@ export function ToolExecutionCard({
         >
           {display.emoji}
         </motion.span>
-        <span className="font-medium">{display.label}</span>
+        <span className="font-medium">{display.verb || display.label}</span>
         {display.detail && (
           <span className="opacity-70 truncate max-w-[120px]">
             {display.detail}
@@ -300,7 +300,7 @@ export function ToolExecutionCard({
         >
           {display.emoji}
         </motion.span>
-        <span className="text-xs font-semibold">{display.label}</span>
+        <span className="text-xs font-semibold">{display.verb || display.label}</span>
 
         {stepLabel && (
           <span className="text-[10px] text-ink-400 opacity-70">{stepLabel}</span>

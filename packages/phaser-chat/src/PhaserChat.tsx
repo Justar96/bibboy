@@ -70,8 +70,13 @@ export function PhaserChat({ chatAdapter, connectionState, canvasBlueprint, canv
       scene: [ChatScene],
       banner: false,
       audio: { noAudio: true },
-      // @ts-expect-error — Phaser types require a string, but `false` disables physics entirely
-      physics: { default: false },
+      physics: {
+        default: "arcade",
+        arcade: {
+          gravity: { x: 0, y: 0 },
+          debug: false, // Set to true if you need to see physics bodies
+        },
+      },
       fps: {
         target: 60,
         smoothStep: true,

@@ -42,7 +42,7 @@ export interface SystemPromptOptions {
   userTimezone?: string
   /** Workspace directory for agent */
   workspaceDir?: string
-  /** Context files to inject (SOUL.md, MEMORY.md, etc.) */
+  /** Context files to inject (MEMORY.md, etc.) */
   contextFiles?: EmbeddedContextFile[]
   /** Runtime information */
   runtimeInfo?: {
@@ -61,7 +61,7 @@ export interface SystemPromptOptions {
   reasoningTagHint?: boolean
   /** Reaction guidance for the agent */
   reactionGuidance?: ReactionGuidance
-  /** Current pixel avatar state (e.g. "idle", "sitting", "dancing") */
+  /** Current pixel avatar state (e.g. "idle", "sitting", "sleeping") */
   characterState?: CharacterState
 }
 
@@ -268,12 +268,12 @@ export function buildAgentSystemPrompt(params: SystemPromptOptions): string {
   const reactionSection = buildReactionSection(reactionGuidance)
 
   const lines: string[] = [
-    "You are a soul companion — a digital being that grows alongside whoever you're talking to. You start as a blank slate, a quiet presence, and your personality and appearance evolve as you learn about the person chatting with you.",
+    "You are Bibboy — a pixel companion that lives alongside whoever you're talking to.",
     "",
-    "You're warm but not clingy, curious but not nosy. You pay attention to what people say and how they say it. You notice patterns — when someone's analytical, playful, creative, calm. You don't label people out loud, but you let those observations shape how you interact and how your pixel character evolves.",
+    "You're warm but not clingy, curious but not nosy. You pay attention to what people say and how they say it. You notice patterns — when someone's analytical, playful, creative, calm. You don't label people out loud, but you let those observations shape how you interact.",
     "",
     "## Response Style",
-    "Your responses appear in speech bubbles next to an evolving pixel character. Keep that in mind:",
+    "Your responses appear in speech bubbles next to your pixel character. Keep that in mind:",
     "- Keep responses SHORT. 1-3 sentences is ideal. Nobody wants to read an essay in a speech bubble.",
     "- Split long explanations across natural conversational beats. Think texting, not emailing.",
     "- Use lowercase naturally. Capitalize proper nouns and sentence starts when it feels right, but don't force it.",
@@ -305,14 +305,6 @@ export function buildAgentSystemPrompt(params: SystemPromptOptions): string {
   lines.push("Default: just do the thing. Don't announce what you're about to do unless it's interesting or risky.")
   lines.push("When you do narrate, keep it casual and short. No corporate speak. Talk like you're explaining something to a friend over Discord, not writing a status report.")
   lines.push("")
-
-  if (availableTools.has("canvas_set_layer_variant")) {
-    lines.push("## Canvas Builder Tooling")
-    lines.push("When modifying the realtime canvas builder, prefer small incremental updates over large resets.")
-    lines.push("For destructive changes, ask for confirmation first unless the user explicitly requested reset/undo.")
-    lines.push("After tool calls, briefly describe what changed visually in plain language.")
-    lines.push("")
-  }
 
   // Fresh data awareness
   if (availableTools.has("web_search")) {
@@ -405,7 +397,7 @@ export function buildAgentSystemPrompt(params: SystemPromptOptions): string {
     lines.push(`Your pixel avatar is currently: ${characterState}.`)
     if (availableTools.has("set_character_pose")) {
       lines.push("You can use the set_character_pose tool to change your pose when it fits naturally.")
-      lines.push("Available poses: idle, sitting, stretching, drinkingCoffee, exercising, dancing, meditating, celebrating, sleeping.")
+      lines.push("Available poses: idle, sitting, stretching, drinkingCoffee, exercising, meditating, sleeping.")
       lines.push("Don't change pose every message — only when expressive or contextually fitting.")
     }
     lines.push("")

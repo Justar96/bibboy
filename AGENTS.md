@@ -4,7 +4,7 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Project Overview
 
-Bibboy: an AI soul companion with an evolving pixel character, organized as a Bun workspaces monorepo with five packages:
+Bibboy: an AI soul companion with a pixel character, organized as a Bun workspaces monorepo with five packages:
 - **@bibboy/shared** - Shared types, schemas, and utilities
 - **@bibboy/client** - Vite + React frontend application
 - **@bibboy/server** - Effect HttpApi backend server with AI agent system
@@ -40,16 +40,14 @@ bun run lint             # ESLint across all packages
 
 **AI Agent System**: Gemini-powered chat agent with tool execution. Transport: WebSocket (JSON-RPC 2.0) and SSE.
 
-**Soul Evolution**: Agent observes personality traits via `soul_observe_trait` tool. Character evolves through 5 stages (orb, nascent, forming, awakened, evolved) with visual changes applied via canvas operations.
-
 **Canvas System**: Layered sprite system with operations for variants, colors, poses, and animations.
 
 **Agent Tools**: Profiles (minimal, coding, messaging, full):
 - Memory search, Web search/fetch
-- Canvas tools (9 tools), Soul tools (2 tools)
+- Canvas tools (9 tools)
 - Workspace tools (file context)
 
-**WebSocket Protocol**: JSON-RPC 2.0 with soul.stage_change and soul.state_snapshot notifications.
+**WebSocket Protocol**: JSON-RPC 2.0 with canvas.state_patch and canvas.state_snapshot notifications.
 
 ### API Endpoints
 

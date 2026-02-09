@@ -14,14 +14,6 @@ type ToolProfileName = "minimal" | "coding" | "messaging" | "full"
 const BASE_TOOL_GROUPS: Record<Exclude<ToolGroupKey, "group:all">, string[]> = {
   "group:core": ["memory_search", "memory_get", "set_character_pose", "task_suggest"],
   "group:web": ["web_search", "web_fetch"],
-  "group:canvas": [
-    "canvas_get_state", "canvas_set_layer_variant", "canvas_set_layer_color",
-    "canvas_set_palette", "canvas_set_pose", "canvas_set_animation",
-    "canvas_reset_character", "canvas_undo", "canvas_export_blueprint",
-    "canvas_batch_ops", "canvas_randomize_character", "canvas_describe_character",
-    "canvas_adjust_color", "canvas_set_layer_visibility", "canvas_cycle_variant",
-    "canvas_import_blueprint",
-  ],
   "group:workspace": ["read_file", "write_file", "list_files"],
 }
 
@@ -43,7 +35,7 @@ function isToolGroupKey(value: string): value is ToolGroupKey {
 export const TOOL_PROFILES: Record<ToolProfileName, string[]> = {
   minimal: ["group:core"],
   coding: ["group:core", "group:web", "group:workspace"],
-  messaging: ["group:core", "group:web", "group:canvas", "request_tools"],
+  messaging: ["group:core", "group:web", "request_tools"],
   full: [], // Empty = all tools allowed
 }
 

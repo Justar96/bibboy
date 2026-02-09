@@ -4,7 +4,6 @@ import { Schema } from "effect"
 import {
   ClientMessageSchema,
   JSON_RPC_ERRORS,
-  type CanvasStateSnapshotNotification,
   type ClientMessage,
   type JsonRpcSuccessResponse,
   type JsonRpcErrorResponse,
@@ -16,16 +15,12 @@ import {
   type SessionData,
 } from "../services/ChatSessionManager"
 import { ChatProcessor, ChatProcessorLive } from "../services/ChatProcessor"
-import {
-  CanvasStateService,
-  CanvasStateServiceLive,
-} from "../services/CanvasStateService"
 
 // ============================================================================
 // Service Layer
 // ============================================================================
 
-const SharedServicesLive = Layer.mergeAll(ChatSessionManagerLive, CanvasStateServiceLive)
+const SharedServicesLive = Layer.mergeAll(ChatSessionManagerLive)
 
 const WebSocketServicesLive = Layer.mergeAll(
   SharedServicesLive,
@@ -37,7 +32,7 @@ const managedRuntime = ManagedRuntime.make(WebSocketServicesLive)
 
 // Run an effect with the services runtime
 const runEffect = async <A, E>(
-  effect: Effect.Effect<A, E, ChatSessionManager | ChatProcessor | CanvasStateService>
+  effect: Effect.Effect<A, E, ChatSessionManager | ChatProcessor>
 ): Promise<Exit.Exit<A, E>> => {
   return managedRuntime.runPromiseExit(effect)
 }
@@ -180,7 +175,6 @@ export const websocketHandlers = {
 
     const effect = Effect.gen(function* () {
       const sessionManager = yield* ChatSessionManager
-      const canvasState = yield* CanvasStateService
 
       // Check if session exists (reconnection)
       const maybeSession = yield* sessionManager.getSession(sessionId)
@@ -204,21 +198,6 @@ export const websocketHandlers = {
             },
           })
         )
-
-        // Send canvas snapshot for builder rehydration if available
-        const snapshot = yield* canvasState.getSnapshot(sessionId)
-        if (Option.isSome(snapshot)) {
-          const notification: CanvasStateSnapshotNotification = {
-            jsonrpc: "2.0",
-            method: "canvas.state_snapshot",
-            params: {
-              sessionId,
-              version: snapshot.value.version,
-              blueprint: snapshot.value.blueprint,
-            },
-          }
-          ws.send(JSON.stringify(notification))
-        }
 
       } else {
         // New session
@@ -355,10 +334,6 @@ export function startSessionCleanup(intervalMs: number = 10_000): void {
         console.log(`🧹 Cleaned up ${removed} expired WebSocket sessions`)
       }
 
-      // Keep canvas state and soul sessions aligned with live chat sessions.
-      const canvasState = yield* CanvasStateService
-      const activeSessionIds = yield* sessionManager.listSessionIds()
-      yield* canvasState.pruneSessions(activeSessionIds)
     })
 
     await runEffect(effect)

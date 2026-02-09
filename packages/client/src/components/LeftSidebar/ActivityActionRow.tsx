@@ -10,7 +10,6 @@ import { SpinnerIcon, CheckIcon, ErrorIcon } from "@/components/Chat/icons"
 function actionLabel(action: ActivityAction): string {
   if (action.type === "tool") return action.name
   if (action.type === "canvas") return action.name
-  if (action.type === "soul") return action.name
   if (action.type === "text") return action.name
   if (action.type === "compacting") return action.name
   if (action.type === "task") return action.name

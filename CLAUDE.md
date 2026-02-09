@@ -1,11 +1,11 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-Bibboy: an AI soul companion with an evolving pixel character, organized as a Bun workspaces monorepo with five packages:
-- **@bibboy/shared** - Shared types, schemas, and utilities
+Bibboy: an AI soul companion with a pixel character, organized as a Bun workspaces monorepo with five packages:
+- **@bibboy/shared** - Shared types, schemas, and utilities (no build step; exports TS source directly)
 - **@bibboy/client** - Vite + React frontend application
 - **@bibboy/server** - Effect HttpApi backend server with AI agent system
 - **@bibboy/agent-runtime** - AI agent runtime with Gemini client
@@ -19,22 +19,15 @@ bun run dev              # Vite dev server (port 3000)
 bun run dev:server       # Effect HttpApi server (port 3001)
 bun run dev:all          # Run both client and server in parallel
 
-# Building
-bun run build            # Build all packages in order (shared → client → server)
+# Building (order matters: shared → agent-runtime → phaser-chat → client → server)
+bun run build            # Build all packages in dependency order
 bun run build:shared     # Build shared package only
-bun run build:client     # Build client package only
-bun run build:server     # Build server package only
 bun run build:standalone # Build standalone server bundle
-
-# Production
-bun run start            # Start production server (after build)
-bun run server           # Alias for start
-bun run preview          # Preview client production build
 
 # Testing (Vitest with per-package project configs)
 bun run test             # Run all tests once across all packages
 bun run test:watch       # Watch mode
-bun run test:coverage    # Run tests with coverage report
+bun run test:coverage    # Coverage report
 bun test --filter @bibboy/server  # Run tests for specific package
 
 # Linting
@@ -43,97 +36,99 @@ bun run lint             # ESLint across all packages
 
 ## Architecture
 
-### Monorepo Structure
-
-```
-bibboy/
-├── packages/
-│   ├── shared/          # @bibboy/shared - Types, schemas, utilities
-│   │   └── src/
-│   │       └── schemas/ # Effect Schema definitions (soul, canvas, websocket)
-│   ├── client/          # @bibboy/client - Vite + React app
-│   │   └── src/
-│   │       ├── components/
-│   │       ├── pages/
-│   │       ├── hooks/
-│   │       └── services/
-│   ├── server/          # @bibboy/server - Effect HttpApi server
-│   │   └── src/
-│   │       ├── api/     # API definitions and handlers
-│   │       ├── services/ # AgentService, SoulStateService, CanvasStateService
-│   │       ├── agents/  # Agent config, system prompts
-│   │       ├── tools/   # Agent tools (memory, web search, canvas, soul)
-│   │       ├── workspace/ # Context file loading (SOUL.md, MEMORY.md)
-│   │       └── config/  # Environment config
-│   ├── phaser-chat/     # @bibboy/phaser-chat - Phaser 3 canvas
-│   │   └── src/
-│   │       ├── scenes/  # BuilderScene, ChatScene
-│   │       └── sprites/ # TargetCharacter, PixelBoy
-│   └── agent-runtime/   # @bibboy/agent-runtime - AI client libraries
-│       └── src/
-│           └── gemini/  # Gemini API client
-└── scripts/             # Build scripts
-```
-
 ### Package Dependencies
 
-- `@bibboy/client` depends on `@bibboy/shared`
-- `@bibboy/server` depends on `@bibboy/shared` and `@bibboy/agent-runtime`
-- `@bibboy/agent-runtime` depends on `@bibboy/shared`
-- `@bibboy/phaser-chat` depends on `@bibboy/shared`
-- Inter-package dependencies use `workspace:*` protocol
+```
+client → shared, phaser-chat
+server → shared, agent-runtime
+agent-runtime → shared
+phaser-chat → shared
+```
 
-### Key Patterns
+All inter-package dependencies use `workspace:*` and resolve to TypeScript source (not dist). Hot reloading works across package boundaries.
 
-**Effect TS Services**: Services use Effect's `Layer`, `Context`, and tagged errors for type-safe error handling.
+### Server Architecture (Effect TS)
 
-**Effect HttpApi**: Type-safe API definitions in `packages/server/src/api/api.ts` with automatic OpenAPI generation at `/api/docs`.
+**Dual handler system** in `packages/server/src/server.ts`:
+- Regular API endpoints use Effect HttpApi type-safe routing
+- SSE streaming (`POST /api/agent/stream`) handled outside Effect HttpApi as a manual handler
+- WebSocket (`ws://localhost:3001/ws/chat`) uses Bun native WebSocket with `ServerWebSocket<SessionData>`
 
-**AI Agent System**: Gemini-powered chat agent with tool execution (web search, memory search, workspace context, canvas tools, soul tools). Two transport layers:
-- **SSE** (`POST /api/agent/stream`) - handled outside Effect HttpApi
-- **WebSocket** (`ws://localhost:3001/ws/chat`) - Bun native WebSocket with JSON-RPC 2.0 protocol
+The handler cascade in `server.ts` checks pathname: SSE endpoint → static files → CORS preflight → Effect HttpApi routes.
 
-**Soul Evolution**: Agent observes personality traits via `soul_observe_trait` tool. Traits accumulate using EMA scoring. When interaction thresholds are met and trait development is sufficient, the character evolves to the next stage with visual changes applied via canvas operations.
+**Effect patterns**: Services use `Layer`, `Context`, and `Data.TaggedError` for type-safe error handling. API definitions in `packages/server/src/api/api.ts` define the contract; handlers implement it.
 
-**Canvas System**: Layered sprite system (body, eyes, hair, outfit, accessory) with operations for setting variants, colors, poses, and animations. Soul evolution triggers canvas ops to visually evolve the character.
+### Shared Schemas (Effect Schema)
 
-**Agent Tools**: Extensible tool registry system with profiles (minimal, coding, messaging, full):
-- Memory search (embeddings + vector search)
-- Web search (Brave API) / Web fetch
-- Canvas tools (9 tools for sprite manipulation)
-- Soul tools (observe trait, get state)
-- Workspace tools (file context loading)
+All domain types in `packages/shared/src/schemas/` are defined as Effect Schemas providing both compile-time types and runtime validation:
+- `character.ts` - Dual state spaces: `CHARACTER_STATES` (16 total, client-driven) vs `AGENT_POSES` (7, agent-controllable subset)
+- `canvas.ts` - Canvas operations as discriminated unions (`CanvasOp`); 5 sprite layers (body, eyes, hair, outfit, accessory)
+- `websocket.ts` - JSON-RPC 2.0 protocol: requests have `id`, notifications don't
+- `toolDisplay.ts` - Config-driven tool UI with status-aware colors and verb conjugation
 
-**WebSocket Protocol**: JSON-RPC 2.0 defined in `packages/shared/src/schemas/websocket.ts`. Includes `soul.stage_change` and `soul.state_snapshot` notifications.
+### AI Agent System
 
-**Dev Proxy**: In development, Vite proxies `/api/*` to the Effect server (port 3001).
+**Tool registry** (`packages/server/src/tools/`):
+- Tools organized into groups: `core`, `web`, `canvas`, `workspace`
+- 4 profiles (`minimal`, `coding`, `messaging`, `full`) use `group:*` syntax
+- **Deny-first policy evaluation**: check deny list → check allow list → default
+- **Dynamic loading**: `request_tools` meta-tool lets the agent load additional groups mid-conversation
+
+**Tool execution pipeline**: Wrappers applied in order: metrics (outer) → logging → timeout (inner, 30s default)
+
+**System prompt** (`packages/server/src/agents/SystemPromptBuilder.ts`):
+- Modes: `"full"` (main agent), `"minimal"` (subagents), `"none"` (bare)
+- Auto-injects SOUL.md persona and MEMORY.md content as workspace context
+- Thinking levels map to Gemini token budgets: off → undefined, minimal → 1024, ... xhigh → 32768
+
+**Gemini client** (`packages/agent-runtime/src/gemini/`):
+- `cleanSchemaForGemini()` strips unsupported JSON Schema keywords before sending tool definitions
+- Returns Effect types: `Effect<GeminiResponse>` and `Stream<AgentStreamEvent>`
+
+### Phaser Canvas System
+
+**React → Phaser communication**: Direct method calls on scene (no EventBus). React calls `scene.handleUserSent()`, `scene.handlePoseChange()`, `scene.handleCanvasPatch()`, etc.
+
+**PixelBoy state pattern** (`packages/phaser-chat/src/sprites/`):
+- Each character state (idle, thinking, talking, sitting, etc.) is a separate `StateHandler` class
+- PixelBoy is a thin orchestrator delegating to state handlers via `enterState(state)` / `exitCurrentState()`
+- `PixelBoyContext` passed to handlers carries sprite, tweens, container, transition helpers
+- `TweenManager` manages named tweens that auto-stop on state exit
+
+**Canvas updates**: Canvas tools emit `CanvasStatePatch` → WebSocket → React → PhaserChat → PixelBoy.setBlueprint()
+
+### Client-Server Communication
+
+- **WebSocket**: JSON-RPC 2.0 with reconnect handling (`session.resumed` notification)
+- **SSE**: For streaming agent responses via `POST /api/agent/stream`
+- **Dev proxy**: Vite proxies `/api/*` to the Effect server (port 3001)
 
 ### API Endpoints
 
 - `GET /api/health` - Health check
 - `GET /api/docs` - OpenAPI/Swagger UI
 - `GET /api/agents` - List available agents
-- `GET /api/suggestions` - Get prompt suggestions
+- `GET /api/suggestions` - Prompt suggestions
 - `POST /api/agent` - Non-streaming agent run
 - `POST /api/agent/stream` - Streaming agent run (SSE)
-- `GET /api/workspace/files` - List workspace context files
-- `GET /api/workspace/file` - Get single workspace file
+- `GET /api/workspace/files` - Workspace context files
+- `GET /api/workspace/file` - Single workspace file
 - `ws://localhost:3001/ws/chat` - JSON-RPC 2.0 chat
 
 ## Environment Variables
 
 Copy `packages/server/.env.example` to `packages/server/.env` and configure:
 
-**Required:**
-- `GEMINI_API_KEY` - Google Gemini API key (chat and embeddings)
-
-**Optional:**
-- `BRAVE_API_KEY` - Brave Search API for web search tool
-- `ALLOWED_ORIGINS` - Comma-separated CORS origins
+**Required:** `GEMINI_API_KEY` - Google Gemini API key (chat and embeddings)
+**Optional:** `BRAVE_API_KEY` - Brave Search API, `ALLOWED_ORIGINS` - Comma-separated CORS origins
 
 ## Testing
 
-Tests live in `packages/*/tests/`. Root `vitest.config.ts` uses `projects` to delegate to per-package configs. Client tests use `jsdom` environment; server tests use `node`.
+Tests live in `packages/*/tests/`. Root `vitest.config.ts` delegates to per-package configs via `projects`. Client tests use `jsdom`; server tests use `node`. Globals (`describe`, `it`, `expect`) are auto-imported.
+
+**Common test patterns**:
+- Server tools: Create mock runtime with in-memory state, track patches array for assertions
+- Tool policies: Test compiled patterns (`"*"`, `"web_*"`, `"group:core"`) and deny-first evaluation
 
 ## Code Style
 
@@ -143,3 +138,4 @@ Tests live in `packages/*/tests/`. Root `vitest.config.ts` uses `projects` to de
 - **File size:** ~700 LOC guideline; split when it improves clarity
 - **No V2 copies:** Extract helpers instead of duplicating with suffixes
 - **Comments:** Brief comments for non-obvious logic only
+- Canvas tools: prefer incremental updates over reset; destructive ops (like `reset_character`) require `confirm: true`

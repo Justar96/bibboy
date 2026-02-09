@@ -1,8 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react"
 import {
   type AgentPose,
-  type CanvasCharacterBlueprint,
-  type CanvasOp,
   type CharacterState,
   type ChatMessage,
   type TypingState,
@@ -80,12 +78,6 @@ export interface UseWebSocketChatReturn {
   readonly pendingPoseChange: AgentPose | null
   /** Clear the pending pose change */
   readonly clearPoseChange: () => void
-  /** Latest canvas blueprint from realtime builder notifications */
-  readonly canvasBlueprint: CanvasCharacterBlueprint | null
-  /** Version for the latest canvas blueprint */
-  readonly canvasVersion: number | null
-  /** Last applied canvas operation */
-  readonly lastCanvasOp: CanvasOp | null
   /** Throttled tool messages (80ms batched) for UI rendering */
   readonly toolMessages: ToolMessage[]
 }
@@ -128,9 +120,6 @@ export function useWebSocketChat(
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null)
   const [isCompacting, setIsCompacting] = useState(false)
   const [pendingPoseChange, setPendingPoseChange] = useState<AgentPose | null>(null)
-  const [canvasBlueprint, setCanvasBlueprint] = useState<CanvasCharacterBlueprint | null>(null)
-  const [canvasVersion, setCanvasVersion] = useState<number | null>(null)
-  const [lastCanvasOp, setLastCanvasOp] = useState<CanvasOp | null>(null)
 
   // Refs
   const wsRef = useRef<WebSocket | null>(null)
@@ -152,6 +141,7 @@ export function useWebSocketChat(
   const toolItemToCallIdRef = useRef<Map<string, string>>(new Map())
   // Ref to hold latest streamingContent for use in handleMessage
   const streamingContentRef = useRef("")
+  const handleMessageRef = useRef<(event: MessageEvent) => void>(() => {})
   
   // Keep ref in sync with state
   useEffect(() => {
@@ -234,9 +224,6 @@ export function useWebSocketChat(
         onSessionResumedRef,
         setIsCompacting,
         setPendingPoseChange,
-        setCanvasVersion,
-        setCanvasBlueprint,
-        setLastCanvasOp,
       }),
     []
   )
@@ -302,6 +289,11 @@ export function useWebSocketChat(
     [notificationHandlers, responseEventHandlers]
   )
 
+  // Keep handleMessage ref in sync so connect() always uses the latest handler
+  useEffect(() => {
+    handleMessageRef.current = handleMessage
+  }, [handleMessage])
+
 // Connect to WebSocket
   const connect = useCallback(() => {
     // Don't connect if unmounting
@@ -350,7 +342,7 @@ export function useWebSocketChat(
     ws.onmessage = (event) => {
       // Ignore if this isn't the current connection
       if (connectionIdRef.current !== thisConnectionId) return
-      handleMessage(event)
+      handleMessageRef.current(event)
     }
 
     ws.onclose = (_event) => {
@@ -382,7 +374,7 @@ export function useWebSocketChat(
     }
 
     wsRef.current = ws
-  }, [url, getSessionId, handleMessage])
+  }, [url, getSessionId])
 
   // Disconnect from WebSocket
   const disconnect = useCallback(() => {
@@ -483,9 +475,6 @@ export function useWebSocketChat(
   const clearMessages = useCallback(() => {
     setMessages([])
     resetStreamingState()
-    setCanvasBlueprint(null)
-    setCanvasVersion(null)
-    setLastCanvasOp(null)
   }, [resetStreamingState])
 
   // Auto-connect on mount if enabled
@@ -547,9 +536,6 @@ export function useWebSocketChat(
       isCompacting,
       pendingPoseChange,
       clearPoseChange,
-      canvasBlueprint,
-      canvasVersion,
-      lastCanvasOp,
       toolMessages,
     }),
     [
@@ -568,9 +554,6 @@ export function useWebSocketChat(
       isCompacting,
       pendingPoseChange,
       clearPoseChange,
-      canvasBlueprint,
-      canvasVersion,
-      lastCanvasOp,
       toolMessages,
     ]
   )

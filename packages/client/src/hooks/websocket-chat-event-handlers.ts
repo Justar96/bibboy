@@ -2,8 +2,6 @@ import type {
   ChatMessage,
   TypingState,
   AgentPose,
-  CanvasCharacterBlueprint,
-  CanvasOp,
 } from "@bibboy/shared"
 import { isAgentPose } from "@bibboy/shared"
 import type { Dispatch, MutableRefObject, SetStateAction } from "react"
@@ -16,8 +14,6 @@ import {
 import {
   extractAssistantMessageContent,
   extractEventErrorMessage,
-  parseCanvasPatch,
-  parseCanvasSnapshot,
   readNumber,
   readString,
 } from "./websocket-chat-parsers"
@@ -50,9 +46,6 @@ interface NotificationHandlerDeps {
   onSessionResumedRef: MutableRefObject<((messageCount: number) => void) | undefined>
   setIsCompacting: Dispatch<SetStateAction<boolean>>
   setPendingPoseChange: Dispatch<SetStateAction<AgentPose | null>>
-  setCanvasVersion: Dispatch<SetStateAction<number | null>>
-  setCanvasBlueprint: Dispatch<SetStateAction<CanvasCharacterBlueprint | null>>
-  setLastCanvasOp: Dispatch<SetStateAction<CanvasOp | null>>
 }
 
 export function createResponseEventHandlers(
@@ -269,22 +262,6 @@ export function createNotificationHandlers(
       const pose = params.pose
       if (typeof pose === "string" && isAgentPose(pose)) {
         deps.setPendingPoseChange(pose)
-      }
-    },
-    "canvas.state_snapshot": (params) => {
-      const snapshot = parseCanvasSnapshot(params)
-      if (snapshot) {
-        deps.setCanvasVersion(snapshot.version)
-        deps.setCanvasBlueprint(snapshot.blueprint)
-        deps.setLastCanvasOp(null)
-      }
-    },
-    "canvas.state_patch": (params) => {
-      const patch = parseCanvasPatch(params)
-      if (patch) {
-        deps.setCanvasVersion(patch.version)
-        deps.setCanvasBlueprint(patch.blueprint)
-        deps.setLastCanvasOp(patch.op)
       }
     },
   }

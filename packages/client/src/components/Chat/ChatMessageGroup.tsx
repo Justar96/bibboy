@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import type { ChatMessage as ChatMessageType } from "@bibboy/shared"
 import type { ToolExecution } from "@/hooks/useWebSocketChat"
 import { ChatBubble } from "./ChatBubble"
-import { ToolExecutionCard } from "./ToolExecutionCard"
+import { ToolGroup } from "./ToolGroup"
 import { SPRING, SMOOTH, STAGGER_DELAY } from "./animation"
 import { UserIcon, AgentIcon } from "./icons"
 
@@ -115,20 +115,9 @@ export const ChatMessageGroup = memo(function ChatMessageGroup({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -2 }}
               transition={SMOOTH}
-              className={`mb-2.5 ${
-                allToolsDone ? "flex flex-wrap gap-1.5" : "space-y-1.5"
-              }`}
+              className="mb-2.5"
             >
-              {tools.map((tool, index) => (
-                <ToolExecutionCard
-                  key={tool.id}
-                  tool={tool}
-                  compact={allToolsDone}
-                  staggerIndex={index}
-                  totalTools={tools.length}
-                  onOpenSidebar={onOpenSidebar}
-                />
-              ))}
+              <ToolGroup tools={tools} onOpenSidebar={onOpenSidebar} />
             </motion.div>
           )}
         </AnimatePresence>

@@ -9,9 +9,9 @@ describe("set_character_pose tool", () => {
       emittedPose = pose
     })
 
-    const result = await tool.execute("call_1", { pose: "dancing" })
+    const result = await tool.execute("call_1", { pose: "meditating" })
 
-    expect(emittedPose).toBe("dancing")
+    expect(emittedPose).toBe("meditating")
     expect(result.error).toBeUndefined()
     expect(result.content[0]?.text).toContain("\"success\": true")
   })

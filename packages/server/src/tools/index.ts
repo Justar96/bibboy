@@ -5,10 +5,6 @@ import { createWebFetchTool } from "./web-fetch"
 import { createMemorySearchTool, createMemoryGetTool } from "./memory-search"
 import { createWorkspaceTools } from "./workspace-tools"
 import { createSetCharacterPoseTool } from "./set-character-pose"
-import {
-  createCanvasTools,
-  type CanvasToolRuntime,
-} from "./canvas-tools"
 import type { ResolvedAgentConfig } from "../agents/AgentConfig"
 import {
   TOOL_GROUPS,
@@ -22,14 +18,12 @@ import {
 const TOOL_GROUP_DESCRIPTIONS: Record<ToolGroupName, string> = {
   core: "Memory search, task suggestions, and character pose",
   web: "Web search and URL content fetching",
-  canvas: "Pixel character builder — layers, colors, poses, animations",
   workspace: "File read/write/list for workspace context",
 }
 
 const TOOL_GROUP_NAMES: Record<ToolGroupName, string[]> = {
   core: TOOL_GROUPS["group:core"],
   web: TOOL_GROUPS["group:web"],
-  canvas: TOOL_GROUPS["group:canvas"],
   workspace: TOOL_GROUPS["group:workspace"],
 }
 
@@ -49,7 +43,6 @@ function createGroupTools(
   config: ResolvedAgentConfig,
   getSessionMessages: () => ChatMessage[],
   sendPoseChange?: (pose: AgentPose) => void,
-  canvasRuntime?: CanvasToolRuntime,
 ): AgentTool[] {
   switch (group) {
     case "core": {
@@ -70,8 +63,6 @@ function createGroupTools(
       webParts.push(createWebFetchTool())
       return webParts
     }
-    case "canvas":
-      return canvasRuntime ? createCanvasTools(canvasRuntime) : []
     case "workspace":
       return createWorkspaceTools(config.id)
   }
@@ -85,7 +76,6 @@ export function createToolRegistry(
   agentConfig: ResolvedAgentConfig,
   getSessionMessages: () => ChatMessage[],
   sendPoseChange?: (pose: AgentPose) => void,
-  canvasRuntime?: CanvasToolRuntime,
 ): ToolRegistry {
   const tools: AgentTool[] = []
 
@@ -129,16 +119,6 @@ export function createToolRegistry(
   // Add character pose tool (when pose change callback is available)
   if (sendPoseChange && shouldInclude("set_character_pose")) {
     tools.push(createSetCharacterPoseTool(sendPoseChange))
-  }
-
-  // Add canvas builder tools (session-scoped)
-  if (canvasRuntime) {
-    const canvasTools = createCanvasTools(canvasRuntime)
-    for (const tool of canvasTools) {
-      if (shouldInclude(tool.name)) {
-        tools.push(tool)
-      }
-    }
   }
 
   const loadedGroups = new Set<ToolGroupName>()
@@ -192,7 +172,7 @@ export function createToolRegistry(
           if (loadedGroups.has(group)) continue
 
           // Actually instantiate tools for the requested group
-          const newTools = createGroupTools(group, agentConfig, getSessionMessages, sendPoseChange, canvasRuntime)
+          const newTools = createGroupTools(group, agentConfig, getSessionMessages, sendPoseChange)
           const addedNames: string[] = []
           for (const tool of newTools) {
             if (!tools.some((t) => t.name === tool.name)) {
@@ -300,7 +280,6 @@ export { createWebFetchTool } from "./web-fetch"
 export { createMemorySearchTool, createMemoryGetTool } from "./memory-search"
 export { createWorkspaceTools } from "./workspace-tools"
 export { createSetCharacterPoseTool } from "./set-character-pose"
-export { createCanvasTools, type CanvasToolRuntime } from "./canvas-tools"
 export { compactToolResult, resetResultCounter } from "./tool-result-store"
 export {
   TOOL_GROUPS,

@@ -10,14 +10,15 @@
     "lint": "oxlint src/"
   },
   "dependencies": {
-    "@effect/platform": "catalog:",
-    "@effect/schema": "catalog:",
     "@bibboy/phaser-chat": "workspace:*",
     "@bibboy/shared": "workspace:*",
+    "@effect/platform": "catalog:",
+    "@effect/schema": "catalog:",
     "@radix-ui/react-hover-card": "^1.1.15",
     "clsx": "^2.1.1",
     "effect": "catalog:",
     "framer-motion": "catalog:",
+    "geist": "^1.7.0",
     "highlight.js": "catalog:",
     "lucide-react": "catalog:",
     "phaser": "^3.90.0",

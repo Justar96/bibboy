@@ -1,12 +1,8 @@
 import {
-  type CanvasCharacterBlueprint,
-  type CanvasOp,
   type JsonRpcErrorResponse,
   type JsonRpcSuccessResponse,
 } from "@bibboy/shared"
 import {
-  isCanvasBlueprint,
-  isCanvasOp,
   isJsonRecord,
   type JsonRecord,
 } from "./websocket-chat-utils"
@@ -72,26 +68,4 @@ export function extractAssistantMessageContent(output: unknown, fallback: string
 export function extractEventErrorMessage(data: JsonRecord, fallback: string): string {
   const error = isJsonRecord(data.error) ? data.error : null
   return readString(error?.message) ?? fallback
-}
-
-export function parseCanvasSnapshot(
-  params: JsonRecord
-): { version: number; blueprint: CanvasCharacterBlueprint } | null {
-  const version = readNumber(params.version)
-  const blueprint = params.blueprint
-  if (version === null || !isCanvasBlueprint(blueprint)) {
-    return null
-  }
-  return { version, blueprint }
-}
-
-export function parseCanvasPatch(
-  params: JsonRecord
-): { version: number; blueprint: CanvasCharacterBlueprint; op: CanvasOp | null } | null {
-  const snapshot = parseCanvasSnapshot(params)
-  if (!snapshot) return null
-  return {
-    ...snapshot,
-    op: isCanvasOp(params.op) ? params.op : null,
-  }
 }

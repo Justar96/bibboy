@@ -8,7 +8,6 @@ const BOY_MARGIN = 80
 
 const ENTRANCE_START_X = -30
 const BUBBLE_GAP = 12
-const LONG_RESPONSE_THRESHOLD = 5
 const CHUNK_LINGER_MS = 800
 
 const GROUND_LINE_WIDTH = 1
@@ -152,13 +151,12 @@ export class ChatScene extends Phaser.Scene {
   }
 
   private finishChunks(): void {
-    const wasLongResponse = this.chunks.length >= LONG_RESPONSE_THRESHOLD
     this.isShowingChunks = false
     this.chunks = []
     this.chunkIndex = 0
 
     // Let the last chunk linger before fading out
-    const nextState = wasLongResponse ? "celebrating" : "idle"
+    const nextState = "idle"
     if (this.bubble) {
       this.time.delayedCall(CHUNK_LINGER_MS, () => {
         if (this.bubble) {
@@ -191,6 +189,16 @@ export class ChatScene extends Phaser.Scene {
     this.groundLine.moveTo(0, y)
     this.groundLine.lineTo(width, y)
     this.groundLine.strokePath()
+  }
+
+  // -------------------------------------------------------------------------
+  // Update Loop
+  // -------------------------------------------------------------------------
+
+  update(time: number, delta: number): void {
+    if (this.boy) {
+      this.boy.update(time, delta);
+    }
   }
 
   private handleResize(gameSize: Phaser.Structs.Size): void {

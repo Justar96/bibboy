@@ -22,6 +22,10 @@ export interface ToolDisplayConfig {
   argKeys?: string[]
   /** Keys to extract from result for preview */
   resultKeys?: string[]
+  /** Verb while running (e.g., "searching", "reading") */
+  verbRunning?: string
+  /** Verb when completed (e.g., "searched", "read") */
+  verbCompleted?: string
 }
 
 /** Resolved tool display with formatted detail */
@@ -31,6 +35,8 @@ export interface ResolvedToolDisplay {
   icon: string
   label: string
   detail?: string
+  /** Status-aware verb (e.g., "searching" or "searched") */
+  verb?: string
 }
 
 /** Max length for detail values before truncation */
@@ -47,6 +53,8 @@ export const TOOL_DISPLAY_CONFIG: Record<string, ToolDisplayConfig> = {
     emoji: "🔎",
     icon: "search",
     label: "Search",
+    verbRunning: "Searching",
+    verbCompleted: "Searched",
     colors: {
       running: "bg-blue-500/10 border-blue-500/20 text-blue-400",
       completed: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
@@ -59,6 +67,8 @@ export const TOOL_DISPLAY_CONFIG: Record<string, ToolDisplayConfig> = {
     emoji: "📄",
     icon: "globe",
     label: "Fetch",
+    verbRunning: "Fetching",
+    verbCompleted: "Fetched",
     colors: {
       running: "bg-purple-500/10 border-purple-500/20 text-purple-400",
       completed: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
@@ -73,6 +83,8 @@ export const TOOL_DISPLAY_CONFIG: Record<string, ToolDisplayConfig> = {
     emoji: "📖",
     icon: "file",
     label: "Read",
+    verbRunning: "Reading",
+    verbCompleted: "Read",
     colors: {
       running: "bg-slate-500/10 border-slate-500/20 text-slate-400",
       completed: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
@@ -85,6 +97,8 @@ export const TOOL_DISPLAY_CONFIG: Record<string, ToolDisplayConfig> = {
     emoji: "✍️",
     icon: "file-plus",
     label: "Write",
+    verbRunning: "Writing",
+    verbCompleted: "Wrote",
     colors: {
       running: "bg-green-500/10 border-green-500/20 text-green-400",
       completed: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
@@ -96,6 +110,8 @@ export const TOOL_DISPLAY_CONFIG: Record<string, ToolDisplayConfig> = {
     emoji: "📝",
     icon: "edit",
     label: "Edit",
+    verbRunning: "Editing",
+    verbCompleted: "Edited",
     colors: {
       running: "bg-amber-500/10 border-amber-500/20 text-amber-400",
       completed: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
@@ -109,6 +125,8 @@ export const TOOL_DISPLAY_CONFIG: Record<string, ToolDisplayConfig> = {
     emoji: "🔍",
     icon: "code-search",
     label: "Grep",
+    verbRunning: "Searching",
+    verbCompleted: "Found",
     colors: {
       running: "bg-cyan-500/10 border-cyan-500/20 text-cyan-400",
       completed: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
@@ -131,6 +149,8 @@ export const TOOL_DISPLAY_CONFIG: Record<string, ToolDisplayConfig> = {
     emoji: "📁",
     icon: "folder-search",
     label: "Find",
+    verbRunning: "Finding",
+    verbCompleted: "Found",
     colors: {
       running: "bg-teal-500/10 border-teal-500/20 text-teal-400",
       completed: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
@@ -144,6 +164,8 @@ export const TOOL_DISPLAY_CONFIG: Record<string, ToolDisplayConfig> = {
     emoji: "🛠️",
     icon: "terminal",
     label: "Exec",
+    verbRunning: "Executing",
+    verbCompleted: "Executed",
     colors: {
       running: "bg-zinc-500/10 border-zinc-500/20 text-zinc-400",
       completed: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
@@ -158,6 +180,8 @@ export const TOOL_DISPLAY_CONFIG: Record<string, ToolDisplayConfig> = {
     emoji: "🧠",
     icon: "brain",
     label: "Memory",
+    verbRunning: "Recalling",
+    verbCompleted: "Recalled",
     colors: {
       running: "bg-pink-500/10 border-pink-500/20 text-pink-400",
       completed: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
@@ -501,6 +525,8 @@ function resolveDetailFromArgs(args: Record<string, unknown>, keys: string[]): s
 export function resolveToolDisplay(params: {
   name: string
   args?: Record<string, unknown>
+  /** Tool status for verb selection */
+  status?: "running" | "completed" | "error"
 }): ResolvedToolDisplay {
   const config = getToolDisplay(params.name)
   
@@ -509,12 +535,21 @@ export function resolveToolDisplay(params: {
     detail = resolveDetailFromArgs(params.args, config.argKeys)
   }
   
+  // Resolve verb based on status
+  let verb: string | undefined
+  if (params.status === "running" && config.verbRunning) {
+    verb = config.verbRunning
+  } else if ((params.status === "completed" || params.status === "error") && config.verbCompleted) {
+    verb = config.verbCompleted
+  }
+  
   return {
     name: params.name,
     emoji: config.emoji ?? "🧩",
     icon: config.icon,
     label: config.label,
     detail,
+    verb,
   }
 }
 

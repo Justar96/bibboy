@@ -46,7 +46,7 @@ export interface UseWorkspaceFilesResult {
 const DEFAULT_AGENT_ID = "default" as const
 
 /** Polling interval for SOUL.md updates (ms) */
-const SOUL_POLL_INTERVAL = 2000 as const
+const SOUL_POLL_INTERVAL = 5000 as const
 
 // ============================================================================
 // Type Guards

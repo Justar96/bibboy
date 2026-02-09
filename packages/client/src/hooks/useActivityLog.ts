@@ -10,7 +10,7 @@ export type ActivityActionStatus = "running" | "completed" | "error"
 
 export interface ActivityAction {
   readonly id: string
-  readonly type: "tool" | "canvas" | "soul" | "text" | "compacting" | "task"
+  readonly type: "tool" | "canvas" | "text" | "compacting" | "task"
   readonly name: string
   readonly status: ActivityActionStatus
   readonly startedAt: number
